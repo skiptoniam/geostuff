@@ -53,7 +53,6 @@ gdal_mask <- function(inpath, mask, outpath) {
 #' @name gdal_180_to_360
 #' @param inpath
 #' @param outpath
-###@param extent extent of raster, as vector in the following format xmin, xmax, ymin, ymax.
 
 gdal_180_to_360 <- function(inpath,outpath){
 
