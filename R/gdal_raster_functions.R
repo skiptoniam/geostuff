@@ -7,6 +7,8 @@
 #' @param resolution resolution of output raster (usually based on the input raster)
 #' @param return_raster if TRUE raster will be returned from function call.
 #' @export
+#'
+#' @importFrom raster raster
 
 gdal_crop <- function(inpath, outpath, extent, resolution,return_raster = FALSE){
   gdalwarp <- Sys.which('gdalwarp')
@@ -34,6 +36,9 @@ gdal_crop <- function(inpath, outpath, extent, resolution,return_raster = FALSE)
 #' @param outpath file path of the output raster
 #' @param return_raster if TRUE raster will be returned from function call.
 #' @export
+#'
+#' @importFrom raster raster
+
 
 gdal_mask <- function(inpath, mask, outpath,return_raster = FALSE) {
 
@@ -64,6 +69,8 @@ gdal_mask <- function(inpath, mask, outpath,return_raster = FALSE) {
 #' @param outpath file path of output file to generate.
 #' @param return_raster if TRUE raster will be returned from function call.
 #' @export
+
+#' @importFrom raster raster
 
 gdal_180_to_360 <- function(inpath,outpath,return_raster = FALSE){
 
@@ -106,6 +113,8 @@ gdal_180_to_360 <- function(inpath,outpath,return_raster = FALSE){
 #' @param bigtif if TRUE deal with a big geotiff slightly differently.
 #' @param return_raster if TRUE raster will be returned from function call.
 #' @export
+
+#' @importFrom raster raster
 
 gdal_resample <- function (inpath, outpath, resolution, method = 'near',
                            bigtif = FALSE, return_raster = FALSE){
