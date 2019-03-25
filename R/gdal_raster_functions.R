@@ -5,10 +5,10 @@
 #' @param outpath file path of the output raster
 #' @param extent extent for raster to be cropped to
 #' @param resolution resolution of output raster (usually based on the input raster)
+#' @param return_raster if TRUE raster will be returned from function call.
 #' @export
 
-
-gdal_crop <- function(inpath, outpath, extent, resolution){
+gdal_crop <- function(inpath, outpath, extent, resolution,return_raster = FALSE){
   gdalwarp <- Sys.which('gdalwarp')
   if(gdalwarp=='') stop('gdalwarp not found on system.')
   if(!file.exists(outpath)) {
@@ -20,6 +20,10 @@ gdal_crop <- function(inpath, outpath, extent, resolution){
       sprintf('gdalwarp -co "COMPRESS=LZW" -of gtiff -te %f %f %f %f -tr %f %f %s %s',
               extent[1],extent[3],extent[2],extent[4], resolution[1], resolution[2], inpath, outpath))
   }
+  if (isTRUE(return_raster)) {
+    outraster <- raster::raster(outpath)
+    return(outraster)
+  }
 }
 
 #' @title Mask function using gdal
@@ -28,9 +32,10 @@ gdal_crop <- function(inpath, outpath, extent, resolution){
 #' @param inpath file path of the input raster
 #' @param mask path to a mask file which is NA for cells to mask and 1 for cells to keep.
 #' @param outpath file path of the output raster
+#' @param return_raster if TRUE raster will be returned from function call.
 #' @export
 
-gdal_mask <- function(inpath, mask, outpath) {
+gdal_mask <- function(inpath, mask, outpath,return_raster = FALSE) {
 
   gdal_calc <- Sys.which('gdal_calc.py')
   if(gdal_calc=='') stop('gdal_calc.py not found on system.')
@@ -46,15 +51,21 @@ gdal_mask <- function(inpath, mask, outpath) {
     system(call2)
     system(paste0('rm ',tmp_rast))
   }
+  if (isTRUE(return_raster)) {
+    outraster <- raster::raster(outpath)
+    return(outraster)
+  }
 }
 
 #' @title Rotate raster from -180/180 to 0/360 degrees
 #' @rdname gdal_180_to_360
 #' @name gdal_180_to_360
-#' @param inpath
-#' @param outpath
+#' @param inpath file path of input file to change.
+#' @param outpath file path of output file to generate.
+#' @param return_raster if TRUE raster will be returned from function call.
+#' @export
 
-gdal_180_to_360 <- function(inpath,outpath){
+gdal_180_to_360 <- function(inpath,outpath,return_raster = FALSE){
 
   gdal_trans <- Sys.which('gdal_translate')
   gdal_merge <- Sys.which('gdal_merge.py')
@@ -78,6 +89,55 @@ gdal_180_to_360 <- function(inpath,outpath){
      system(call2)
      system(call3)
      system(call4)
+  }
+  if (isTRUE(return_raster)) {
+    outraster <- raster::raster(outpath)
+    return(outraster)
+  }
+}
+
+#' @title Resample raster to different resolution
+#' @rdname gdal_resample
+#' @name gdal_resample
+#' @param inpath file path of input file to change.
+#' @param outpath file path of output file to generate.
+#' @param resolution desired new resolution for x and y.
+#' @param method resample method, default is nearest neighbour which is fast but dodgy.
+#' @param bigtif if TRUE deal with a big geotiff slightly differently.
+#' @param return_raster if TRUE raster will be returned from function call.
+#' @export
+
+gdal_resample <- function (inpath, outpath, resolution, method = 'near',
+                           bigtif = FALSE, return_raster = FALSE){
+
+  if(lenght(resolution)!=2)stop("Target resolution need for x and y.")
+
+  if (!method %in% c("near", "bilinear", "cubic", "cubicspline",
+                     "lanczos", "average", "mode", "max", "min", "med", "q1",
+                     "q3")) {
+    stop("Resampling method not available.")
+  }
+
+  resample_command <- paste0("gdalwarp -multi -of vrt -tr ",
+                             " ", resolution, " ", resolution, " -r ",
+                             method, " ", inpath, " ", gsub(tools::file_ext(outpath),
+                                                            "vrt", outpath))
+  if (isTRUE(bigtif)) {
+    VRT2TIF <- paste0("gdal_translate -co compress=LZW -co BIGTIFF=YES",
+                      " ", gsub(tools::file_ext(outpath), "vrt", outpath),
+                      " ", gsub(tools::file_ext(outpath), "tif", outpath))
+  }
+  else {
+    VRT2TIF <- paste0("gdal_translate -co compress=LZW",
+                      " ", gsub(tools::file_ext(outpath), "vrt", outpath),
+                      " ", gsub(tools::file_ext(outpath), "tif", outpath))
+  }
+  system(resample_command)
+  system(VRT2TIF)
+  unlink(gsub(tools::file_ext(outpath), "vrt", outpath))
+  if (isTRUE(return_raster)) {
+    outraster <- raster::raster(outpath)
+    return(outraster)
   }
 }
 
