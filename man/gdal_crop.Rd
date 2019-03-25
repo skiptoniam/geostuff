@@ -2,7 +2,7 @@
 % Please edit documentation in R/gdal_functions.R
 \name{gdal_crop}
 \alias{gdal_crop}
-\title{gdal functions in R}
+\title{Crop function using gdal}
 \usage{
 gdal_crop(inpath, outpath, extent, resolution)
 }
