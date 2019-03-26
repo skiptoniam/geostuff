@@ -150,3 +150,27 @@ gdal_resample <- function (inpath, outpath, resolution, method = 'near',
   }
 }
 
+#' @title Calculate distance raster using gdal
+#' @rdname gdal_distance
+#' @name gdal_distance
+#' @param inpath file path of input file to change.
+#' @param outpath file path of output file to generate.
+#' @param target numeric vaules to calculate distance from default is zero.
+#' @param maxdist The maximum distance to be generated. maxdist is in pixels.
+#' @param return_raster if TRUE raster will be returned from function call.
+#' @export
+
+gdal_distance <- function(inpath, outpath, target=NULL, maxdist=NULL, return_raster=FALSE){
+          gdal_prox <- Sys.which('gdal_proximity.py')
+          if(gdal_prox=='') stop('gdal_proximity.py not found on system.')
+
+          if(!file.exists(outpath)){
+            call1 <- sprintf('python %s %s %s -of GTiff  ', gdal_prox, inpath, outpath)
+            system(call1)
+          }
+          if (isTRUE(return_raster)) {
+            outraster <- raster::raster(outpath)
+            return(outraster)
+          }
+}
+

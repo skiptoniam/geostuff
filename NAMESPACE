@@ -2,6 +2,7 @@
 
 export(gdal_180_to_360)
 export(gdal_crop)
+export(gdal_distance)
 export(gdal_mask)
 export(gdal_resample)
 importFrom(raster,raster)

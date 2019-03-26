@@ -4,7 +4,7 @@ Title: sense is a r package which does spatial manipulation of remotely sensed a
 Version: 0.1.0
 Author: Skipton Woolley
 Maintainer: Skipton Woolley <skip.woolley@csiro.au>
-Description: Here are some spatial functions in R I use for big data where, raster slows down or becomes impractical to use. 
+Description: Here are some spatial functions in R I use for big data when raster slows down or becomes impractical to use. 
 License: GPL-3 + file LICENSE
 Encoding: UTF-8
 LazyData: true
