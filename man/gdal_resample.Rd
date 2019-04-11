@@ -4,8 +4,8 @@
 \alias{gdal_resample}
 \title{Resample raster to different resolution}
 \usage{
-gdal_resample(inpath, outpath, resolution, method = "near", bigtif = FALSE,
-  return_raster = FALSE)
+gdal_resample(inpath, outpath, resolution, method = "near",
+  bigtif = FALSE, return_raster = FALSE)
 }
 \arguments{
 \item{inpath}{file path of input file to change.}
@@ -19,4 +19,7 @@ gdal_resample(inpath, outpath, resolution, method = "near", bigtif = FALSE,
 \item{bigtif}{if TRUE deal with a big geotiff slightly differently.}
 
 \item{return_raster}{if TRUE raster will be returned from function call.}
+}
+\description{
+Resample raster to different resolution
 }

@@ -15,3 +15,6 @@ gdal_mask(inpath, mask, outpath, return_raster = FALSE)
 
 \item{return_raster}{if TRUE raster will be returned from function call.}
 }
+\description{
+Mask function using gdal
+}

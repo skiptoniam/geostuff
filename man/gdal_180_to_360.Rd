@@ -13,3 +13,6 @@ gdal_180_to_360(inpath, outpath, return_raster = FALSE)
 
 \item{return_raster}{if TRUE raster will be returned from function call.}
 }
+\description{
+Rotate raster from -180/180 to 0/360 degrees
+}

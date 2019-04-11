@@ -119,7 +119,7 @@ gdal_180_to_360 <- function(inpath,outpath,return_raster = FALSE){
 gdal_resample <- function (inpath, outpath, resolution, method = 'near',
                            bigtif = FALSE, return_raster = FALSE){
 
-  if(lenght(resolution)!=2)stop("Target resolution need for x and y.")
+  if(length(resolution)!=2)stop("Target resolution need for x and y.")
 
   if (!method %in% c("near", "bilinear", "cubic", "cubicspline",
                      "lanczos", "average", "mode", "max", "min", "med", "q1",
@@ -128,9 +128,8 @@ gdal_resample <- function (inpath, outpath, resolution, method = 'near',
   }
 
   resample_command <- paste0("gdalwarp -multi -of vrt -tr ",
-                             " ", resolution, " ", resolution, " -r ",
-                             method, " ", inpath, " ", gsub(tools::file_ext(outpath),
-                                                            "vrt", outpath))
+                             " ", resolution[1], " ", resolution[2], " -r ",
+                             method," ",inpath, " ", gsub(tools::file_ext(outpath), "vrt", outpath))
   if (isTRUE(bigtif)) {
     VRT2TIF <- paste0("gdal_translate -co compress=LZW -co BIGTIFF=YES",
                       " ", gsub(tools::file_ext(outpath), "vrt", outpath),
@@ -173,4 +172,30 @@ gdal_distance <- function(inpath, outpath, target=NULL, maxdist=NULL, return_ras
             return(outraster)
           }
 }
+
+gdal_stitch_titles <- function(outpath, tiles_path, return_raster = TRUE, large_tif = TRUE){
+  buildVRT <- paste0("gdalbuildvrt", " ", gsub(pkgmaker::file_extension(outpath),
+                                               "vrt", outpath), " ", tiles_path)
+  if (large_tif == TRUE) {
+    VRT2TIF <- paste0("gdal_translate -co compress=LZW -co BIGTIFF=YES",
+                      " ", gsub(pkgmaker::file_extension(outpath),
+                                "vrt", outpath), " ", gsub(pkgmaker::file_extension(outpath),
+                                                               "tif", outpath))
+  }
+  else {
+    VRT2TIF <- paste0("gdal_translate -co compress=LZW",
+                      " ", gsub(pkgmaker::file_extension(outpath),
+                                "vrt", outpath), " ", gsub(pkgmaker::file_extension(outpath),
+                                                               "tif", outpath))
+  }
+  system(buildVRT)
+  system(VRT2TIF)
+  unlink(gsub(pkgmaker::file_extension(outpath), "vrt",
+              outpath))
+  if (return_raster) {
+    out <- raster::raster(outpath)
+    return(out)
+  }
+}
+
 

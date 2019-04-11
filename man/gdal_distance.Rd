@@ -18,3 +18,6 @@ gdal_distance(inpath, outpath, target = NULL, maxdist = NULL,
 
 \item{return_raster}{if TRUE raster will be returned from function call.}
 }
+\description{
+Calculate distance raster using gdal
+}

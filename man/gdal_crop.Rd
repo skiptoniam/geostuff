@@ -17,3 +17,6 @@ gdal_crop(inpath, outpath, extent, resolution, return_raster = FALSE)
 
 \item{return_raster}{if TRUE raster will be returned from function call.}
 }
+\description{
+Crop function using gdal
+}
