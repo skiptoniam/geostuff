@@ -2,13 +2,21 @@
 % Please edit documentation in R/gdal_raster_functions.R
 \name{gdal_resample}
 \alias{gdal_resample}
+\alias{gdalResample}
 \title{Resample raster to different resolution}
 \usage{
-gdal_resample(inpath, outpath, resolution, method = "near",
-  bigtif = FALSE, return_raster = FALSE)
+gdalResample(
+  inraster,
+  outpath = NULL,
+  resampleRaster = NULL,
+  resolution = NULL,
+  method = "bilinear",
+  bigtif = FALSE,
+  returnRaster = TRUE
+)
 }
 \arguments{
-\item{inpath}{file path of input file to change.}
+\item{inraster}{file path of inpath file to change.}
 
 \item{outpath}{file path of output file to generate.}
 
