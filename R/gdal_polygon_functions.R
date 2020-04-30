@@ -34,7 +34,7 @@ ogrBBoxClip <- function(inshp, outshp=NULL, ext, returnShape=TRUE) {
 
   # free up the data
   if(!is.character(inshp)) unlink(tmpShpIn)
-  if(!is.character(inshp)) unlink(tmpShpOut)
+  if(!is.character(outshp)|is.null(outshp)) unlink(tmpShpOut)
 
   return(retshp)
 }
