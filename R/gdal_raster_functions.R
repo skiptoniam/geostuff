@@ -47,21 +47,24 @@ gdalCrop <- function(inpath, outpath, extent=NULL, resolution=NULL, return = TRU
 gdalRasterise <- function(shp, rast, variable=NULL) {
 
   tmpTif <- tempfile(fileext=".tif")
-  tmpShp <- tempfile(fileext=".shp")
 
-  # write polygon
-  rgdal::writeOGR(shp,dirname(tmpShp),gsub("[.]shp","", basename(tmpShp)),driver="ESRI Shapefile",overwrite=TRUE)
+  if(is.character(shp)){
+   tmpShp <- shp
+  } else {
+   tmpShp <- tempfile(fileext=".shp")
+   rgdal::writeOGR(shp,dirname(tmpShp),gsub("[.]shp","", basename(tmpShp)),driver="ESRI Shapefile",overwrite=TRUE)
+  }
 
   # use gdalPolygonize
   if( is.null(variable) ) {
     system(
-      sprintf( "gdal_rasterize  -burn 1 -at -a_nodata -9999 -a_srs '%s' -tr %f %f -te %f %f %f %f %s %s",
+      sprintf( "gdal_rasterize  -burn 1 -at -a_nodata -9999 -a_srs '%s' -tr %f %f -te %f %f %f %f '%s' '%s'",
                projection(rast), xres(rast), yres(rast), xmin(rast), ymin(rast), xmax(rast), ymax(rast),
                tmpShp, tmpTif)
     )
   } else {
     system(
-      sprintf( "gdal_rasterize  -a '%s' -at -a_nodata -9999 -a_srs '%s' -tr %f %f -te %f %f %f %f %s %s",
+      sprintf( "gdal_rasterize  -a '%s' -at -a_nodata -9999 -a_srs '%s' -tr %f %f -te %f %f %f %f '%s' '%s'",
                variable, projection(rast), xres(rast), yres(rast), xmin(rast), ymin(rast), xmax(rast), ymax(rast),
                tmpShp, tmpTif)
     )
@@ -73,7 +76,7 @@ gdalRasterise <- function(shp, rast, variable=NULL) {
 
   # free up the data
   unlink(tmpTif)
-  unlink(tmpShp)
+  if(!is.character(shp)) unlink(tmpShp)
 
   return(r.out)
 }
