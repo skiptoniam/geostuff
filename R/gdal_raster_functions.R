@@ -44,7 +44,7 @@ gdalCrop <- function(inpath, outpath, extent=NULL, resolution=NULL, return = TRU
 #' @importFrom raster raster xres yres projection xmin ymin xmax ymax values extent nrow ncol
 #' @importFrom rgdal writeOGR
 
-gdalRasterise <- function(shp, rast, variable=NULL) {
+gdalRasterise <- function(shp, rast, variable=NULL, bigtif=FALSE) {
 
   tmpTif <- tempfile(fileext=".tif")
 
@@ -58,17 +58,19 @@ gdalRasterise <- function(shp, rast, variable=NULL) {
   # use gdalPolygonize
   if( is.null(variable) ) {
     system(
-      sprintf( "gdal_rasterize  -burn 1 -at -a_nodata -9999 -a_srs '%s' -tr %f %f -te %f %f %f %f '%s' '%s'",
+      sprintf( "gdal_rasterize --config GDAL_CACHEMAX 500 -burn 1 -at -a_nodata -9999 -a_srs '%s' -tr %f %f -te %f %f %f %f '%s' '%s'",
                projection(rast), xres(rast), yres(rast), xmin(rast), ymin(rast), xmax(rast), ymax(rast),
                tmpShp, tmpTif)
     )
   } else {
     system(
-      sprintf( "gdal_rasterize  -a '%s' -at -a_nodata -9999 -a_srs '%s' -tr %f %f -te %f %f %f %f '%s' '%s'",
+      sprintf( "gdal_rasterize --config GDAL_CACHEMAX 500 -a '%s' -at -a_nodata -9999 -a_srs '%s' -tr %f %f -te %f %f %f %f '%s' '%s'",
                variable, projection(rast), xres(rast), yres(rast), xmin(rast), ymin(rast), xmax(rast), ymax(rast),
                tmpShp, tmpTif)
     )
   }
+
+  if(bigtif)return(print(tmpTif))
 
   # create a new raster object
   r.out <- raster(extent(rast), ncols=ncol(rast), nrows=nrow(rast), crs=projection(rast))
