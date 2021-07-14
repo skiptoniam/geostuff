@@ -4,7 +4,7 @@
 \alias{gdalRasterise}
 \title{Faster rasterisation of shapefile to raster using gdal}
 \usage{
-gdalRasterise(shp, rast, variable = NULL)
+gdalRasterise(shp, rast, variable = NULL, bigtif = FALSE)
 }
 \arguments{
 \item{shp}{local shapefile or file path of the inpath raster}

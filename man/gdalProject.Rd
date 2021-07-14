@@ -5,26 +5,41 @@
 \title{Faster reprojectiom of rasters using gdal}
 \usage{
 gdalProject(
-  inraster,
-  outdir = NULL,
+  inpath,
+  outpath,
   xres,
   yres = xres,
   s_srs,
   t_srs,
-  resampling,
-  extent,
-  of = "GTiff",
-  extension = "tif",
+  resampling = "bilinear",
+  extent = NULL,
   ot = "Float32",
+  of = "GTiff",
   returnRaster = TRUE
 )
 }
 \arguments{
-\item{inraster}{local or file path of the inpath raster}
+\item{inpath}{file path of the inpath raster}
 
-\item{outdir}{local shapefile or file path of the output raster}
+\item{outpath}{file path of the output raster}
 
-\item{xres}{resolution of cells}
+\item{xres}{resolution of output raster x direction.}
+
+\item{yres}{resolution of output raster y direction - default is the same as xres.}
+
+\item{resampling}{The method to resample the raster, default is "bilinear"}
+
+\item{extent}{The extent of the output raster: xmin, ymin, xmax, ymax}
+
+\item{ot}{The data output type, default is "Float32".}
+
+\item{of}{The file output format, default is "GTiFF".}
+
+\item{returnRaster}{Default TRUE, if TRUE return the processed raster to the R environment.}
+
+\item{s_src}{the EPSG projection of the original raster}
+
+\item{t_src}{the EPSG projection of the output raster}
 }
 \description{
 Faster reprojectiom of rasters using gdal
