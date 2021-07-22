@@ -4,13 +4,7 @@
 \alias{gdalDistance}
 \title{Calculate distance raster using gdal}
 \usage{
-gdalDistance(
-  inpath,
-  outpath,
-  target = NULL,
-  maxdist = NULL,
-  return_raster = FALSE
-)
+gdalDistance(inpath, outpath, target = 0, maxdist = NULL, return_raster = TRUE)
 }
 \arguments{
 \item{inpath}{file path of inpath file to change.}

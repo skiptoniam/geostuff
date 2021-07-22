@@ -7,7 +7,8 @@
 gdalReclassify(
   inpath,
   outpath,
-  calc_fun,
+  reclassify_list = NULL,
+  calc_fun = NULL,
   overwrite = TRUE,
   return_raster = TRUE
 )
@@ -16,6 +17,10 @@ gdalReclassify(
 \item{inpath}{file path of inpath file to change.}
 
 \item{outpath}{file path of output file to generate.}
+
+\item{reclassify_list}{A list of values to reclassify, the value will be assigned by list index, e.g the first element will be made 1 and so forth. Values associated with that list will be converted to that number.}
+
+\item{calc_fun}{A text function that follows the "https://gdal.org/programs/gdal_calc.html" syntax.}
 
 \item{return_raster}{if TRUE raster will be returned from function call.}
 }

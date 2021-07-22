@@ -1,119 +1,93 @@
-#' @title Crop function using gdal
-#' @rdname gdalCrop
-#' @name gdalCrop
-#' @param inpath file path of the inpath raster
-#' @param outpath file path of the output raster
-#' @param extent extent for raster to be cropped to
-#' @param resolution resolution of output raster (usually based on the inpath raster)
+#' @title Rotate raster from -180/180 to 0/360 degrees
+#' @rdname gdal180to360
+#' @name gdal180to360
+#' @param inpath file path of inpath file to change.
+#' @param outpath file path of output file to generate.
 #' @param return_raster if TRUE raster will be returned from function call.
 #' @export
-#'
+
 #' @importFrom raster raster
 
-gdalCrop <- function(inpath, outpath, extent=NULL, resolution=NULL, return = TRUE){
+gdal180to360 <- function(inpath,outpath,return_raster = FALSE){
 
-  tmpTif1 <- tempfile(fileext=".tif")
-  tmpTif2 <- tempfile(fileext=".tif")
+  gdal_trans <- Sys.which('gdal_translate')
+  gdal_merge <- Sys.which('gdal_merge.py')
+  if(gdal_trans=='') stop('gdal_translate not found on system.')
+  if(gdal_merge=='') stop('gdal_merge.py not found on system.')
 
-  gdalwarp <- Sys.which('gdalwarp')
-  if(gdalwarp=='') stop('gdalwarp not found on system.')
-  if(!file.exists(outpath)) {
-    print(extent)
-    if(length(resolution)!=2)stop('need x and y resolution')
-    print(resolution)
-    message('Cropping ', basename(outpath))
-    system(
-      sprintf('gdalwarp -co "COMPRESS=LZW" -of gtiff -te %f %f %f %f -tr %f %f %s %s',
-              extent[1],extent[3],extent[2],extent[4], resolution[1], resolution[2], inpath, outpath))
+  if(!file.exists(outpath)){
+    r <- raster::raster(inpath)
+    ext <- raster::extent(r)
+    if (!all(c(ext[1],ext[2],ext[3],ext[4])%in%c(-180,180,-90,90)))stop('check the extent of the original rasters, should be xmin = -180, xmax = 180, ymin = -90, max = 90')
+    feature_dir <- base::tempfile("");
+    base::dir.create(feature_dir);
+    rand_fname <- base::tempfile("tmp", feature_dir);
+    tmp_r <- base::paste0(rand_fname, "R.tif");
+    tmp_l <- base::paste0(rand_fname, "L.tif");
+    call1 <- sprintf('gdal_translate -projwin -180 90 0 -90 -a_ullr 180 90 360 -90 %s %s compress=LZW', inpath, tmp_r)
+    call2 <- sprintf('gdal_translate -a_srs EPSG:4326 -projwin 0 90 180 -90 -a_ullr -0 90 180 -90 %s %s compress=LZW', inpath, tmp_l)
+    call3 <- sprintf('%s -of GTiff -o %s %s %s compress=LZW', gdal_merge, outpath, tmp_l, tmp_r)#  $FILE3 $FILE2 $FILE1
+    call4 <- paste0('rm ',tmp_r,' ',tmp_l)
+    system(call1)
+    system(call2)
+    system(call3)
+    system(call4)
   }
-
-  if (isTRUE(return)) {
+  if (isTRUE(return_raster)) {
     outraster <- raster::raster(outpath)
     return(outraster)
   }
 }
 
-#' @title Faster rasterisation of shapefile to raster using gdal
-#' @rdname gdalRasterise
-#' @name gdalRasterise
-#' @param shp local shapefile or file path of the inpath raster
-#' @param rast local shapefile or file path of the output raster
-#' @param variable what variable to convert to a raster
+#' @title Generic function for using gdal_calc
+#' @rdname gdalCalc
+#' @name gdalCalc
+#' @param inpath file path of inpath file to change.
+#' @param outpath file path of output file to generate.
+#' @param calc_fun A text function that can be used from numpy, some examples include: "sum", "average", "std", "max", "min"
+#' @param return_raster if TRUE raster will be returned from function call.
 #' @export
 
-#' @importFrom raster raster xres yres projection xmin ymin xmax ymax values extent nrow ncol
-#' @importFrom rgdal writeOGR
+gdalCalc <- function(inpath, outpath, calc_fun="sum", overwrite=TRUE, return_raster=TRUE){
 
-gdalRasterise <- function(shp, rast, variable=NULL, bigtif=FALSE) {
+  gdal_calc <- Sys.which('gdal_calc.py')
+  if(gdal_calc=='') stop('gdal_calc.py not found on system. Make sure gdal and python installed and visiable to path.')
+  if(overwrite)overwrite <- "--overwrite"
+  else overwrite <- ""
 
-  tmpTif <- tempfile(fileext=".tif")
-
-  if(is.character(shp)){
-   tmpShp <- shp
+  if (!is.null(calc_fun)){
+    calc_fun_in <- calc_fun
+    if(!is.character(calc_fun_in)) stop("Must be a character such as 'sum', see numpy for avaliable functions")
   } else {
-   tmpShp <- tempfile(fileext=".shp")
-   rgdal::writeOGR(shp,dirname(tmpShp),gsub("[.]shp","", basename(tmpShp)),driver="ESRI Shapefile",overwrite=TRUE)
+    stop("You must provide a calc_fun function\n")
   }
 
-  # use gdalPolygonize
-  if( is.null(variable) ) {
-    system(
-      sprintf( "gdal_rasterize --config GDAL_CACHEMAX 2000 -burn 1 -at -a_nodata -9999 -a_srs '%s' -tr %f %f -te %f %f %f %f '%s' '%s' compress=LZW",
-               projection(rast), xres(rast), yres(rast), xmin(rast), ymin(rast), xmax(rast), ymax(rast),
-               tmpShp, tmpTif)
-    )
+  nbands <- suppressWarnings(sapply(inpath, function(x) nrow(attr(rgdal::GDALinfo(x), 'df'))))
+  if(length(inpath) > 26 || nbands > 26) stop('Maximum number of inputs is 26.')
+  if(length(nbands) > 1 & any(nbands > 1))
+    warning('One or more rasters have multiple bands. First band used.')
+
+  if(length(inpath)==1) {
+    inputs <- paste0('-', LETTERS[seq_len(nbands)], ' ', shQuote(inpath), ' --',
+                     LETTERS[seq_len(nbands)], '_band ', seq_len(nbands), collapse=' ')
+    n <- nbands
   } else {
-    system(
-      sprintf( "gdal_rasterize --config GDAL_CACHEMAX 2000 -a '%s' -at -a_nodata -9999 -a_srs '%s' -tr %f %f -te %f %f %f %f '%s' '%s' compress=LZW",
-               variable, projection(rast), xres(rast), yres(rast), xmin(rast), ymin(rast), xmax(rast), ymax(rast),
-               tmpShp, tmpTif)
-    )
+    inputs <- paste0('-', LETTERS[seq_along(nbands)], ' ', shQuote(inpath), ' --',
+                     LETTERS[seq_along(nbands)], '_band 1', collapse=' ')
+    n <- length(inpath)
   }
 
-  if(bigtif)return(print(tmpTif))
+  message('Calculating ',calc_fun,' and writing to ', basename(outpath))
+  call1 <- sprintf("%s %s --outfile='%s' --calc='numpy.%s([%s], axis=0)' --co=compress=LZW type='Float32' '%s'", gdal_calc, inputs, outpath, calc_fun_in, paste0(LETTERS[seq_len(n)], collapse=','), overwrite)#  $FILE3 $FILE2 $FILE1
+  system(call1)
 
-  # create a new raster object
-  r.out <- raster(extent(rast), ncols=ncol(rast), nrows=nrow(rast), crs=projection(rast))
-  values(r.out) <- values(raster(tmpTif))
-
-  # free up the data
-  unlink(tmpTif)
-  if(!is.character(shp)) unlink(tmpShp)
-
-  return(r.out)
-}
-
-#' @title Faster reprojectiom of rasters using gdal
-#' @rdname gdalProject
-#' @name gdalProject
-#' @param inpath file path of the inpath raster
-#' @param outpath file path of the output raster
-#' @param xres resolution of output raster x direction.
-#' @param yres resolution of output raster y direction - default is the same as xres.
-#' @param s_src the EPSG projection of the original raster
-#' @param t_src the EPSG projection of the output raster
-#' @param resampling The method to resample the raster, default is "bilinear"
-#' @param extent The extent of the output raster: xmin, ymin, xmax, ymax
-#' @param ot The data output type, default is "Float32".
-#' @param of The file output format, default is "GTiFF".
-#' @param returnRaster Default TRUE, if TRUE return the processed raster to the R environment.
-#' @export
-
-gdalProject <- function(inpath, outpath, xres, yres=xres, s_srs, t_srs, resampling= "bilinear",
-                        extent=NULL, ot = "Float32", of='GTiff', returnRaster = TRUE) {
-
-  outfile <- file.path(normalizePath(tempdir()), basename(outpath))
-  system(sprintf('gdalwarp -ot %s -s_srs "%s" -t_srs "%s" -r %s -multi %s -tr %s -dstnodata -9999 -of %s "%s" "%s" compress=LZW',
-                 ot, s_srs, t_srs, resampling,
-                 if(!is.null(extent)) paste(c('-te', extent[1],extent[3],extent[2],extent[4]), collapse=' ') else '',
-                 paste(xres, yres), of, inpath, outpath))
-
-  if (isTRUE(returnRaster)) {
-    outraster <- raster::raster(outpath)
-    return(outraster)
+  if(return_raster){
+    r <- raster(outpath)
+    return(r)
   }
 
 }
+
 
 #' @title Clip raster with a shape file
 #' @rdname gdalClipWithShape
@@ -148,12 +122,12 @@ gdalClipWithShape <- function(inrast, inshp, outrast=NULL, field=NULL,
   }
 
   if(cropToShape){
-    if(is.null(field)) x <- sprintf("gdalwarp -co compress=lzw -of GTiff -cutline '%s' -crop_to_cutline '%s' '%s'",
+    if(is.null(field)) x <- sprintf("gdalwarp -co compress=LZW -of GTiff -cutline '%s' -crop_to_cutline '%s' '%s'",
                                     tmpShpIn, tmpRastIn, tmpRastOut)
     else x <- sprintf("gdalwarp -co compress=LZW -of GTiff -cutline '%s' -cl %s -crop_to_cutline '%s' '%s'",
                       tmpShpIn, field, tmpRastIn, tmpRastOut)
   } else {
-    if(is.null(field)) x <- sprintf("gdalwarp -co compress=lzw -of GTiff -cutline '%s' '%s' '%s'",
+    if(is.null(field)) x <- sprintf("gdalwarp -co compress=LZW -of GTiff -cutline '%s' '%s' '%s'",
                                     tmpShpIn, tmpRastIn, tmpRastOut)
     else x <- sprintf("gdalwarp -co compress=LZW -of GTiff -cutline '%s' -cl %s '%s' '%s'",
                       tmpShpIn, field, tmpRastIn, tmpRastOut)
@@ -172,6 +146,74 @@ gdalClipWithShape <- function(inrast, inshp, outrast=NULL, field=NULL,
 
 }
 
+#' @title Crop function using gdal
+#' @rdname gdalCrop
+#' @name gdalCrop
+#' @param inpath file path of the inpath raster
+#' @param outpath file path of the output raster
+#' @param extent extent for raster to be cropped to
+#' @param resolution resolution of output raster (usually based on the inpath raster)
+#' @param return_raster if TRUE raster will be returned from function call.
+#' @export
+#'
+#' @importFrom raster raster
+
+gdalCrop <- function(inpath, outpath, extent=NULL, resolution=NULL, return = TRUE){
+
+  tmpTif1 <- tempfile(fileext=".tif")
+  tmpTif2 <- tempfile(fileext=".tif")
+
+  gdalwarp <- Sys.which('gdalwarp')
+  if(gdalwarp=='') stop('gdalwarp not found on system.')
+  if(!file.exists(outpath)) {
+    print(extent)
+    if(length(resolution)!=2)stop('need x and y resolution')
+    print(resolution)
+    message('Cropping ', basename(outpath))
+    system(
+      sprintf('gdalwarp -co "compress=LZW" -of gtiff -te %f %f %f %f -tr %f %f %s %s',
+              extent[1],extent[3],extent[2],extent[4], resolution[1], resolution[2], inpath, outpath))
+  }
+
+  if (isTRUE(return)) {
+    outraster <- raster::raster(outpath)
+    return(outraster)
+  }
+}
+
+#' @title Calculate distance raster using gdal
+#' @rdname gdalDistance
+#' @name gdalDistance
+#' @param inpath file path of inpath file to change.
+#' @param outpath file path of output file to generate.
+#' @param target numeric values to calculate distance from default is zero.
+#' @param maxdist The maximum distance to be generated. maxdist is in pixels.
+#' @param return_raster if TRUE raster will be returned from function call.
+#' @export
+
+# inpath <- "/home/woo457/Dropbox/AFMA_cumulative_impacts/data/covariate_data/tmpfolders/pcr.tif"
+# outpath <- "/home/woo457/Dropbox/AFMA_cumulative_impacts/data/covariate_data/tmpfolders/popcentresdist_au.tif"
+gdalDistance <- function(inpath, outpath, target=0, maxdist=NULL, return_raster=TRUE){
+  gdal_prox <- Sys.which('gdal_proximity.py')
+  if(gdal_prox=='') stop('gdal_proximity.py not found on system.')
+
+  if(is.null(target))target <- 0
+  if(is.null(maxdist)){
+    if(!file.exists(outpath)){
+      call1 <- sprintf('%s %s %s -values %d -of GTiff -distunits GEO -nodata -9999 -co compress=LZW', gdal_prox, inpath, outpath, target)
+      system(call1)
+    }
+  } else {
+    if(!file.exists(outpath)){
+      call1 <- sprintf('%s %s %s -values %d -maxdist %d -distunits GEO -nodata -9999 -of GTiff -co compress=LZW -overwrite', gdal_prox, inpath, outpath, target, maxdist)
+      system(call1)
+    }
+  }
+  if (isTRUE(return_raster)) {
+    outraster <- raster::raster(outpath)
+    return(outraster)
+  }
+}
 
 #' @title Mask function using gdal
 #' @rdname gdalMask
@@ -184,7 +226,6 @@ gdalClipWithShape <- function(inrast, inshp, outrast=NULL, field=NULL,
 #'
 #' @importFrom raster raster
 
-
 gdalMask <- function(inpath, mask, outpath,return_raster = FALSE, ...) {
 
   gdal_calc <- Sys.which('gdal_calc.py')
@@ -196,7 +237,7 @@ gdalMask <- function(inpath, mask, outpath,return_raster = FALSE, ...) {
     tmp_rast <- base::paste0(rand_fname, ".tif");
     message('Masking ', basename(outpath))
     call1 <- sprintf('python %s -A %s --outfile=%s --calc="A*(A>-9999)" --NoDataValue=-9999',  gdal_calc, inpath, tmp_rast)
-    call2 <- sprintf('python %s --co="COMPRESS=LZW" -A %s -B %s --outfile=%s --calc="(A*(A>0))*(B*(B>0))" --NoDataValue=0',  gdal_calc, tmp_rast, mask, outpath)
+    call2 <- sprintf('python %s --co="compress=LZW" -A %s -B %s --outfile=%s --calc="(A*(A>0))*(B*(B>0))" --NoDataValue=0',  gdal_calc, tmp_rast, mask, outpath)
     system(call1)
     system(call2)
     unlink(tmp_rast)
@@ -207,64 +248,192 @@ gdalMask <- function(inpath, mask, outpath,return_raster = FALSE, ...) {
   }
 }
 
-#' @title Rotate raster from -180/180 to 0/360 degrees
-#' @rdname gdal180to360
-#' @name gdal180to360
-#' @param inpath file path of inpath file to change.
-#' @param outpath file path of output file to generate.
-#' @param return_raster if TRUE raster will be returned from function call.
+#' @title Split a multiband raster into multiple single files.
+#' @rdname gdalMultiband2Singles
+#' @name gdalMultiband2Singles
+#' @param inpath input multiband raster file path.
+#' @param outdir output directory to write multiple single files.
+#' @param band which bands to convert, default is NULL (and will do all).
+#' @param return_list TRUE, return rasters as a list.
 #' @export
 
-#' @importFrom raster raster
-
-gdal180to360 <- function(inpath,outpath,return_raster = FALSE){
+gdalMultiband2Singles <- function(inpath, outdir=NULL, bands=NULL, return_list = TRUE){
 
   gdal_trans <- Sys.which('gdal_translate')
-  gdal_merge <- Sys.which('gdal_merge.py')
   if(gdal_trans=='') stop('gdal_translate not found on system.')
-  if(gdal_merge=='') stop('gdal_merge.py not found on system.')
+  if(is.null(outdir)) outdir <- tempdir()
 
-  if(!file.exists(outpath)){
-     r <- raster::raster(inpath)
-     ext <- raster::extent(r)
-     if (!all(c(ext[1],ext[2],ext[3],ext[4])%in%c(-180,180,-90,90)))stop('check the extent of the original rasters, should be xmin = -180, xmax = 180, ymin = -90, max = 90')
-     feature_dir <- base::tempfile("");
-     base::dir.create(feature_dir);
-     rand_fname <- base::tempfile("tmp", feature_dir);
-     tmp_r <- base::paste0(rand_fname, "R.tif");
-     tmp_l <- base::paste0(rand_fname, "L.tif");
-     call1 <- sprintf('gdal_translate -projwin -180 90 0 -90 -a_ullr 180 90 360 -90 %s %s compress=LZW', inpath, tmp_r)
-     call2 <- sprintf('gdal_translate -a_srs EPSG:4326 -projwin 0 90 180 -90 -a_ullr -0 90 180 -90 %s %s compress=LZW', inpath, tmp_l)
-     call3 <- sprintf('python %s -of GTiff -o %s %s %s compress=LZW', gdal_merge, outpath, tmp_l, tmp_r)#  $FILE3 $FILE2 $FILE1
-     call4 <- paste0('rm ',tmp_r,' ',tmp_l)
-     system(call1)
-     system(call2)
-     system(call3)
-     system(call4)
+  tmpBrick <- raster::brick(inpath)
+  nbands <- raster::nlayers(tmpBrick)
+
+  if(!is.null(bands)) {
+    b1 <- range(bands)[1]
+    b2 <- range(bands)[2]
+  } else {
+    b1 <- 1
+    b2 <- nbands
   }
-  if (isTRUE(return_raster)) {
+
+  if(nbands>1){
+    for (ii in b1:b2){
+      tmpRastOut <- paste0(outdir,"/",names(tmpBrick)[ii],"_",ii,".tif")
+      call1 <- sprintf("gdal_translate -co compress=LZW '%s' -b %d '%s'", inpath, ii, tmpRastOut)
+      system(call1)
+    }
+  } else{
+    message("This is not a multiband object")
+    return(NULL)
+  }
+
+  if(return_list){
+    rast.list <- list()
+    for (ii in b1:b2){
+      rast.list[[ii]] <- raster(paste0(names(tmpBrick)[ii],"_",ii,".tif"))
+    }
+    return(rast.list)
+  }
+
+}
+
+
+
+#' @title Faster reprojectiom of rasters using gdal
+#' @rdname gdalProject
+#' @name gdalProject
+#' @param inpath file path of the inpath raster
+#' @param outpath file path of the output raster
+#' @param xres resolution of output raster x direction.
+#' @param yres resolution of output raster y direction - default is the same as xres.
+#' @param s_src the EPSG projection of the original raster
+#' @param t_src the EPSG projection of the output raster
+#' @param resampling The method to resample the raster, default is "bilinear"
+#' @param extent The extent of the output raster: xmin, ymin, xmax, ymax
+#' @param ot The data output type, default is "Float32".
+#' @param of The file output format, default is "GTiFF".
+#' @param returnRaster Default TRUE, if TRUE return the processed raster to the R environment.
+#' @export
+
+gdalProject <- function(inpath, outpath, xres, yres=xres, s_srs, t_srs, resampling= "bilinear",
+                        extent=NULL, ot = "Float32", of='GTiff', returnRaster = TRUE) {
+
+  outfile <- file.path(normalizePath(tempdir()), basename(outpath))
+  system(sprintf('gdalwarp -ot %s -s_srs "%s" -t_srs "%s" -r %s -multi %s -tr %s -dstnodata -9999 -of %s "%s" "%s" compress=LZW',
+                 ot, s_srs, t_srs, resampling,
+                 if(!is.null(extent)) paste(c('-te', extent[1],extent[3],extent[2],extent[4]), collapse=' ') else '',
+                 paste(xres, yres), of, inpath, outpath))
+
+  if (isTRUE(returnRaster)) {
     outraster <- raster::raster(outpath)
     return(outraster)
   }
+
 }
+
+#' @title Faster rasterisation of shapefile to raster using gdal
+#' @rdname gdalRasterise
+#' @name gdalRasterise
+#' @param shp local shapefile or file path of the inpath raster
+#' @param rast local shapefile or file path of the output raster
+#' @param variable what variable to convert to a raster
+#' @export
+
+#' @importFrom raster raster xres yres projection xmin ymin xmax ymax values extent nrow ncol
+#' @importFrom rgdal writeOGR
+
+gdalRasterise <- function(shp, rast, variable=NULL, bigtif=FALSE) {
+
+  tmpTif <- tempfile(fileext=".tif")
+
+  if(is.character(shp)){
+    tmpShp <- shp
+  } else {
+    tmpShp <- tempfile(fileext=".shp")
+    rgdal::writeOGR(shp,dirname(tmpShp),gsub("[.]shp","", basename(tmpShp)),driver="ESRI Shapefile",overwrite=TRUE)
+  }
+
+  # use gdalPolygonize
+  if( is.null(variable) ) {
+    system(
+      sprintf( "gdal_rasterize --config GDAL_CACHEMAX 2000 -burn 1 -at -a_nodata -9999 -a_srs '%s' -tr %f %f -te %f %f %f %f '%s' '%s' -co compress=LZW",
+               projection(rast), xres(rast), yres(rast), xmin(rast), ymin(rast), xmax(rast), ymax(rast),
+               tmpShp, tmpTif)
+    )
+  } else {
+    system(
+      sprintf( "gdal_rasterize --config GDAL_CACHEMAX 2000 -a '%s' -at -a_nodata -9999 -a_srs '%s' -tr %f %f -te %f %f %f %f '%s' '%s' -co compress=LZW",
+               variable, projection(rast), xres(rast), yres(rast), xmin(rast), ymin(rast), xmax(rast), ymax(rast),
+               tmpShp, tmpTif)
+    )
+  }
+
+  if(bigtif)return(print(tmpTif))
+
+  # create a new raster object
+  r.out <- raster(extent(rast), ncols=ncol(rast), nrows=nrow(rast), crs=projection(rast))
+  values(r.out) <- values(raster(tmpTif))
+
+  # free up the data
+  unlink(tmpTif)
+  if(!is.character(shp)) unlink(tmpShp)
+
+  return(r.out)
+}
+
 
 #' @title Reclassify raster using gdal_calc
 #' @rdname gdalReclassify
 #' @name gdalReclassify
 #' @param inpath file path of inpath file to change.
 #' @param outpath file path of output file to generate.
+#' @param reclassify_list A list of values to reclassify, the value will be assigned by list index, e.g the first element will be made 1 and so forth. Values associated with that list will be converted to that number.
+#' @param calc_fun A text function that follows the "https://gdal.org/programs/gdal_calc.html" syntax.
 #' @param return_raster if TRUE raster will be returned from function call.
 #' @export
 
-gdalReclassify <- function(inpath, outpath, calc_fun, overwrite=TRUE, return_raster=TRUE){
+gdalReclassify <- function(inpath, outpath, reclassify_list=NULL, calc_fun=NULL, overwrite=TRUE, return_raster=TRUE){
+
+  # if(all(is.null(c(calc_fun,reclassify_list)))) stop("You must provide a calc_fun function or reclassify_list")
 
   gdal_calc <- Sys.which('gdal_calc.py')
   if(gdal_calc=='') stop('gdal_calc.py not found on system. Make sure gdal and python installed and visiable to path.')
-
   if(overwrite)overwrite <- "--overwrite"
   else overwrite <- ""
 
-  call3 <- sprintf('python %s -of GTiff -o %s %s %s compress=LZW', gdal_calc, inpath, outpath, overwrite)#  $FILE3 $FILE2 $FILE1
+  if(!is.null(reclassify_list)&&is.null(calc_fun)){
+    message("Using reclassify_list to reclass raster\n")
+    reclassify_list <- list(crop = c(10, 11, 12, 20, 30),
+                         crop_mosaic = 40,
+                         forest = c(50, 60, 61, 62, 70, 80, 90, 100, 160, 170), #>15% cover
+                         grass = c(110, 130),
+                         wetland = c(180),
+                         urban = c(190),
+                         shrub = c(120, 121,122),
+                         other = c(140, 150, 151, 152, 153, 200,201,202,220),
+                         water = 210)
+
+    reclass_idx <- function(idx, x) {
+      .x <- x[[idx]]
+      paste0("(",idx,"*(",paste0("(A==",.x,")",collapse = "+"),"))")
+    }
+    calc_list_out <- lapply(seq_along(reclassify_list), reclass_idx, x = reclassify_list)
+    calc_fun_in <- paste0(calc_list_out,collapse = "+")
+  } else if (!is.null(reclassify_list)&&!is.null(calc_fun)){
+    message("Using calc_fun instead of reclassify_list to reclass raster\n")
+    calc_fun_in <- calc_fun
+  } else if (is.null(reclassify_list)&&!is.null(calc_fun)){
+    message("Using calc_fun instead of reclassify_list to reclass raster\n")
+    calc_fun_in <- calc_fun
+  } else {
+    stop("You must provide a calc_fun function or reclassify_list\n")
+  }
+
+  call1 <- sprintf("%s -A '%s' --outfile='%s' --calc='%s' --co=compress=LZW '%s'", gdal_calc, inpath, outpath, calc_fun_in, overwrite)#  $FILE3 $FILE2 $FILE1
+  system(call1)
+
+  if(return_raster){
+    r <- raster(outpath)
+    return(r)
+  }
 
 
 }
@@ -326,30 +495,6 @@ gdalResample <- function(inraster, outpath = NULL, resampleRaster = NULL,
   }
 }
 
-#' @title Calculate distance raster using gdal
-#' @rdname gdalDistance
-#' @name gdalDistance
-#' @param inpath file path of inpath file to change.
-#' @param outpath file path of output file to generate.
-#' @param target numeric values to calculate distance from default is zero.
-#' @param maxdist The maximum distance to be generated. maxdist is in pixels.
-#' @param return_raster if TRUE raster will be returned from function call.
-#' @export
-
-gdalDistance <- function(inpath, outpath, target=NULL, maxdist=NULL, return_raster=FALSE){
-          gdal_prox <- Sys.which('gdal_proximity.py')
-          if(gdal_prox=='') stop('gdal_proximity.py not found on system.')
-
-          if(!file.exists(outpath)){
-            call1 <- sprintf('python %s %s %s -of GTiff  compress=LZW', gdal_prox, inpath, outpath)
-            system(call1)
-          }
-          if (isTRUE(return_raster)) {
-            outraster <- raster::raster(outpath)
-            return(outraster)
-          }
-}
-
 #' @title Stitch together tiles.
 #' @rdname gdalStitchTitles
 #' @name gdalStitchTitles
@@ -369,13 +514,13 @@ gdalStitchTitles <- function(outpath, tiles_path, return_raster = TRUE, large_ti
     VRT2TIF <- paste0("gdal_translate -co compress=LZW -co BIGTIFF=YES",
                       " ", gsub(pkgmaker::file_extension(outpath),
                                 "vrt", outpath), " ", gsub(pkgmaker::file_extension(outpath),
-                                                               "tif", outpath))
+                                                           "tif", outpath))
   }
   else {
     VRT2TIF <- paste0("gdal_translate -co compress=LZW",
                       " ", gsub(pkgmaker::file_extension(outpath),
                                 "vrt", outpath), " ", gsub(pkgmaker::file_extension(outpath),
-                                                               "tif", outpath))
+                                                           "tif", outpath))
   }
   system(buildVRT)
   system(VRT2TIF)
@@ -387,52 +532,27 @@ gdalStitchTitles <- function(outpath, tiles_path, return_raster = TRUE, large_ti
   }
 }
 
-#' @title Split a multiband raster into multiple single files.
-#' @rdname gdalMultiband2Singles
-#' @name gdalMultiband2Singles
-#' @param inpath input multiband raster file path.
-#' @param outdir output directory to write multiple single files.
-#' @param band which bands to convert, default is NULL (and will do all).
-#' @param return_list TRUE, return rasters as a list.
+
+#' @title Calculate distance raster using gdal
+#' @rdname gdalTiles
+#' @name gdalTiles
+#' @param inpath file path of inpath file to change.
+#' @param outdir file path of output file to generate.
+#' @param nx The number of x direction pixels per tile
+#' @param ny The number of x direction pixels per tile
 #' @export
 
-gdalMultiband2Singles <- function(inpath, outdir=NULL, bands=NULL, return_list = TRUE){
 
-  gdal_trans <- Sys.which('gdal_translate')
-  if(gdal_trans=='') stop('gdal_translate not found on system.')
-  if(is.null(outdir)) outdir <- tempdir()
+gdalTiles <- function(inpath, outdir, nx=256, ny=nx){
 
-  tmpBrick <- raster::brick(inpath)
-  nbands <- raster::nlayers(tmpBrick)
+  gdal_retile <- Sys.which('gdal_retile.py')
+  if(gdal_retile=='') stop('gdal_retile.py not found on system.')
 
-  if(!is.null(bands)) {
-    b1 <- range(bands)[1]
-    b2 <- range(bands)[2]
-  } else {
-    b1 <- 1
-    b2 <- nbands
-  }
+  call1 <- sprintf("%s -ps %d %d -targetDir '%s' '%s' compress=LZW", gdal_retile, nx, ny, outdir, inpath)
+  system(call1)
 
-  if(nbands>1){
-   for (ii in b1:b2){
-    tmpRastOut <- paste0(outdir,"/",names(tmpBrick)[ii],"_",ii,".tif")
-    call1 <- sprintf("gdal_translate -co compress=lzw '%s' -b %d '%s'", inpath, ii, tmpRastOut)
-    system(call1)
-   }
-  } else{
-    message("This is not a multiband object")
-    return(NULL)
-  }
+}
 
-  if(return_list){
-    rast.list <- list()
-    for (ii in b1:b2){
-     rast.list[[ii]] <- raster(paste0(names(tmpBrick)[ii],"_",ii,".tif"))
-    }
-    return(rast.list)
-  }
-
- }
 
 #' @export
 is.raster <- function(x){
