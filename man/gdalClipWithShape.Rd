@@ -10,7 +10,7 @@ gdalClipWithShape(
   outrast = NULL,
   field = NULL,
   cropToShape = FALSE,
-  returnRaster = TRUE
+  return.raster = TRUE
 )
 }
 \arguments{
@@ -24,7 +24,7 @@ gdalClipWithShape(
 
 \item{cropToShape}{logical Should the raster be cropped to the extent of the shapefile. Default is FALSE}
 
-\item{returnRaster}{logical Should the raster be returned to R environment? Default is TRUE}
+\item{return.raster}{logical Should the raster be returned to R environment? Default is TRUE}
 }
 \description{
 Clip raster with a shape file

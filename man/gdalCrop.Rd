@@ -4,7 +4,13 @@
 \alias{gdalCrop}
 \title{Crop function using gdal}
 \usage{
-gdalCrop(inpath, outpath, extent = NULL, resolution = NULL, return = TRUE)
+gdalCrop(
+  inpath,
+  outpath,
+  extent = NULL,
+  resolution = NULL,
+  return.raster = TRUE
+)
 }
 \arguments{
 \item{inpath}{file path of the inpath raster}

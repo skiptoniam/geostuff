@@ -78,7 +78,7 @@ gdalCalc <- function(inpath, outpath, calc_fun="sum", overwrite=TRUE, return.ras
   }
 
   message('Calculating ',calc_fun,' and writing to ', basename(outpath))
-  call1 <- sprintf("%s %s --outfile='%s' --calc='numpy.%s([%s], axis=0)' --co=compress=LZW type='Float32' '%s'", gdal_calc, inputs, outpath, calc_fun_in, paste0(LETTERS[seq_len(n)], collapse=','), overwrite)#  $FILE3 $FILE2 $FILE1
+  call1 <- sprintf("%s %s --outpath='%s' --calc='numpy.%s([%s], axis=0)' --co=compress=LZW type='Float32' '%s'", gdal_calc, inputs, outpath, calc_fun_in, paste0(LETTERS[seq_len(n)], collapse=','), overwrite)#  $FILE3 $FILE2 $FILE1
   system(call1)
 
   if(return.raster){
@@ -97,12 +97,12 @@ gdalCalc <- function(inpath, outpath, calc_fun="sum", overwrite=TRUE, return.ras
 #' @param outrast NULL or file path. Default NULL and produces a tmp raster file.
 #' @param field name of specific field in shapefile to clip raster with. Default is NULL
 #' @param cropToShape logical Should the raster be cropped to the extent of the shapefile. Default is FALSE
-#' @param returnRaster logical Should the raster be returned to R environment? Default is TRUE
+#' @param return.raster logical Should the raster be returned to R environment? Default is TRUE
 #' @export
 #' @importFrom raster raster
 
 gdalClipWithShape <- function(inrast, inshp, outrast=NULL, field=NULL,
-                              cropToShape=FALSE, returnRaster=TRUE){
+                              cropToShape=FALSE, return.raster=TRUE){
 
   if(!is.character(inshp)){
     tmpShpIn <- tempfile(fileext="in.shp")
@@ -135,7 +135,7 @@ gdalClipWithShape <- function(inrast, inshp, outrast=NULL, field=NULL,
 
   system(x)
   retrast <- NULL
-  if(returnRaster) retrast <- raster::raster(tmpRastOut)
+  if(return.raster) retrast <- raster::raster(tmpRastOut)
 
   # free up the data
   if(!is.character(inrast)) unlink(tmpRastIn)
@@ -158,24 +158,28 @@ gdalClipWithShape <- function(inrast, inshp, outrast=NULL, field=NULL,
 #'
 #' @importFrom raster raster
 
-gdalCrop <- function(inpath, outpath, extent=NULL, resolution=NULL, return = TRUE){
+# ff_in <-list.files("/home/woo457/Dropbox/AFMA_cumulative_impacts/data/covariate_data/MARSPEC/", patt='\\.tif$', full.names=TRUE)
+# ff_out <- paste0(tools::file_path_sans_ext(ff_in),"_cropped_au.tif")
+#
+# inpath <- ff_in[1]
+# outpath <- ff_out[1]
+# extent <- c(90, 180, -60, 0)
+# resolution <- c(1/12,1/12)
 
-  tmpTif1 <- tempfile(fileext=".tif")
-  tmpTif2 <- tempfile(fileext=".tif")
+gdalCrop <- function(inpath, outpath, extent=NULL, resolution=NULL, return.raster = TRUE){
 
   gdalwarp <- Sys.which('gdalwarp')
   if(gdalwarp=='') stop('gdalwarp not found on system.')
-  if(!file.exists(outpath)) {
-    print(extent)
+  # if(!file.exists(outpath)) {
+    if(is.null(extent))stop('need an extent xmin, xmax, ymin, ymax')
     if(length(resolution)!=2)stop('need x and y resolution')
-    print(resolution)
-    message('Cropping ', basename(outpath))
-    system(
-      sprintf('gdalwarp -co "compress=LZW" -of gtiff -te %f %f %f %f -tr %f %f %s %s',
-              extent[1],extent[3],extent[2],extent[4], resolution[1], resolution[2], inpath, outpath))
-  }
+    message('Cropping ', basename(inpath))
+    call1 <- sprintf('gdalwarp -overwrite -co "compress=LZW" -ot Float32 -of gtiff -te %f %f %f %f -tr %f %f %s %s',
+            extent[1],extent[3],extent[2],extent[4], resolution[1], resolution[2], inpath, outpath)
+    system(call1)
+  # }
 
-  if (isTRUE(return)) {
+  if (isTRUE(return.raster)) {
     outraster <- raster::raster(outpath)
     return(outraster)
   }
@@ -226,6 +230,33 @@ gdalDistance <- function(inpath, outpath, target=0, maxdist=NULL, return.raster=
 #'
 #' @importFrom raster raster
 
+
+
+gdalMask <- function(inpath, mask, outpath, quiet=TRUE) {
+  gdal_calc <- Sys.which('gdal_calc.py')
+  if(gdal_calc=='') stop('gdal_calc.py not found on system.')
+  if(!file.exists(outpath)) {
+    message('Masking ', basename(outpath))
+    system(
+      sprintf('%s --co="COMPRESS=LZW" -A %s -B %s --outpath=%s --calc="A"',
+              gdal_calc, inpath, mask, outpath),
+      show.output.on.console=!quiet
+    )
+  }
+  if (isTRUE(return.raster)) {
+    outraster <- raster::raster(outpath)
+    return(outraster)
+  }
+
+}
+
+## Example
+# ff_in <- list.files('unmasked', patt='\\.tif$', full.names=TRUE)
+# ff_out <- sub('unmasked', 'masked', ff_in)
+# system.time(mapply(gdal_mask, ff_in, 'mask.tif', ff_out))
+
+
+
 gdalMask <- function(inpath, mask, outpath,return.raster = FALSE, ...) {
 
   gdal_calc <- Sys.which('gdal_calc.py')
@@ -236,8 +267,8 @@ gdalMask <- function(inpath, mask, outpath,return.raster = FALSE, ...) {
     rand_fname <- base::tempfile("tmp", feature_dir);
     tmp_rast <- base::paste0(rand_fname, ".tif");
     message('Masking ', basename(outpath))
-    call1 <- sprintf('python %s -A %s --outfile=%s --calc="A*(A>-9999)" --NoDataValue=-9999',  gdal_calc, inpath, tmp_rast)
-    call2 <- sprintf('python %s --co="compress=LZW" -A %s -B %s --outfile=%s --calc="(A*(A>0))*(B*(B>0))" --NoDataValue=0',  gdal_calc, tmp_rast, mask, outpath)
+    call1 <- sprintf('python %s -A %s --outpath=%s --calc="A*(A>-9999)" --NoDataValue=-9999',  gdal_calc, inpath, tmp_rast)
+    call2 <- sprintf('python %s --co="compress=LZW" -A %s -B %s --outpath=%s --calc="(A*(A>0))*(B*(B>0))" --NoDataValue=0',  gdal_calc, tmp_rast, mask, outpath)
     system(call1)
     system(call2)
     unlink(tmp_rast)
@@ -310,19 +341,19 @@ gdalMultiband2Singles <- function(inpath, outdir=NULL, bands=NULL, return_list =
 #' @param extent The extent of the output raster: xmin, ymin, xmax, ymax
 #' @param ot The data output type, default is "Float32".
 #' @param of The file output format, default is "GTiFF".
-#' @param returnRaster Default TRUE, if TRUE return the processed raster to the R environment.
+#' @param return.raster Default TRUE, if TRUE return the processed raster to the R environment.
 #' @export
 
 gdalProject <- function(inpath, outpath, xres, yres=xres, s_srs, t_srs, resampling= "bilinear",
-                        extent=NULL, ot = "Float32", of='GTiff', returnRaster = TRUE) {
+                        extent=NULL, ot = "Float32", of='GTiff', return.raster = TRUE) {
 
-  outfile <- file.path(normalizePath(tempdir()), basename(outpath))
+  outpath <- file.path(normalizePath(tempdir()), basename(outpath))
   system(sprintf('gdalwarp -ot %s -s_srs "%s" -t_srs "%s" -r %s -multi %s -tr %s -dstnodata -9999 -of %s "%s" "%s" compress=LZW',
                  ot, s_srs, t_srs, resampling,
                  if(!is.null(extent)) paste(c('-te', extent[1],extent[3],extent[2],extent[4]), collapse=' ') else '',
                  paste(xres, yres), of, inpath, outpath))
 
-  if (isTRUE(returnRaster)) {
+  if (isTRUE(return.raster)) {
     outraster <- raster::raster(outpath)
     return(outraster)
   }
@@ -427,7 +458,7 @@ gdalReclassify <- function(inpath, outpath, reclassify_list=NULL, calc_fun=NULL,
     stop("You must provide a calc_fun function or reclassify_list\n")
   }
 
-  call1 <- sprintf("%s -A '%s' --outfile='%s' --calc='%s' --co=compress=LZW '%s'", gdal_calc, inpath, outpath, calc_fun_in, overwrite)#  $FILE3 $FILE2 $FILE1
+  call1 <- sprintf("%s -A '%s' --outpath='%s' --calc='%s' --co=compress=LZW '%s'", gdal_calc, inpath, outpath, calc_fun_in, overwrite)#  $FILE3 $FILE2 $FILE1
   system(call1)
 
   if(return.raster){
@@ -441,28 +472,36 @@ gdalReclassify <- function(inpath, outpath, reclassify_list=NULL, calc_fun=NULL,
 #' @title Resample raster to different resolution
 #' @rdname gdalResample
 #' @name gdalResample
-#' @param inraster file path of inpath file to change.
+#' @param inpath file path of inpath file to change.
 #' @param outpath file path of output file to generate.
 #' @param resolution desired new resolution for x and y.
-#' @param method resample method, default is nearest neighbour which is fast but dodgy.
+#' @param method resample method, default is nearest neighbour which is fast but dodgy. Options are: "near", "bilinear", "cubic", "cubicspline",
+# "lanczos", "average", "mode", "max", "min", "med", "q1","q3"
 #' @param bigtif if TRUE deal with a big geotiff slightly differently.
 #' @param return.raster if TRUE raster will be returned from function call.
 #' @export
 
 #' @importFrom raster raster
 
-# gdalResample <- function(inpath, outpath, resolution, method = 'near', bigtif = FALSE, return.raster = FALSE){
-gdalResample <- function(inraster, outpath = NULL, resampleRaster = NULL,
-                         resolution=NULL, method = 'bilinear', bigtif = FALSE,
-                         returnRaster = TRUE){
+# inpath = "/home/woo457/Dropbox/AFMA_cumulative_impacts/data/covariate_data/MARSPEC/MS_bathy_5m_lonlat.tif"
+# outpath = "/home/woo457/Dropbox/AFMA_cumulative_impacts/data/covariate_data/MARSPEC/MS_bathy_lonlat_01res.tif"
+# resolution = c(0.01,0.01)
+# return.raster = TRUE
+# resampleRaster = NULL
 
-  tmpTifIn <- tempfile(fileext=".tif")
+# gdalResample <- function(inpath, outpath, resolution, method = 'near', bigtif = FALSE, return.raster = FALSE){
+gdalResample <- function(inpath, outpath = NULL,
+                         resolution=NULL,
+                         method = 'bilinear', bigtif = FALSE,
+                         return.raster = TRUE){
+
   if(is.null(outpath)){
     tmpTifOut <- tempfile(fileext=".tif")
   } else {
     tmpTifOut <- outpath
   }
-  if(!is.null(resampleRaster))  resolution <- raster::res(resampleRaster)
+
+  # if(!is.null(resampleRaster))  resolution <- raster::res(resampleRaster)
   if(length(resolution)!=2)stop("Target resolution need for x and y.")
 
   if (!method %in% c("near", "bilinear", "cubic", "cubicspline",
@@ -471,25 +510,26 @@ gdalResample <- function(inraster, outpath = NULL, resampleRaster = NULL,
     stop("Resampling method not available.")
   }
 
-  raster::writeRaster(x = inraster, filename = tmpTifIn, format = "GTiff", overwrite=TRUE)
-
-  resample_command <- paste0("gdalwarp -multi -of vrt -tr ",
-                             " ", resolution[1], " ", resolution[2], " -r ",
-                             method," ",tmpTifIn, " ", gsub(tools::file_ext(tmpTifOut), "vrt", tmpTifOut))
+  # resample_command <- paste0("gdalwarp -multi -of vrt -tr ",
+  #                            " ", resolution[1], " ", resolution[2], " -r ",
+  #                            method," ",inpath, " ", gsub(tools::file_ext(tmpTifOut), "vrt", tmpTifOut))
   if (isTRUE(bigtif)) {
+    resample_command <- paste0("gdalwarp -multi -of vrt -tr ",
+                               " ", resolution[1], " ", resolution[2], " -r ",
+                               method," '",inpath, "' '", gsub(tools::file_ext(tmpTifOut), "vrt", tmpTifOut),"'")
     VRT2TIF <- paste0("gdal_translate -co compress=LZW -co BIGTIFF=YES",
-                      " ", gsub(tools::file_ext(tmpTifOut), "vrt", tmpTifOut),
+                     " ", gsub(tools::file_ext(tmpTifOut), "vrt", tmpTifOut),
                       " ", gsub(tools::file_ext(tmpTifOut), "tif", tmpTifOut))
+    system(resample_command)
+    system(VRT2TIF)
+    unlink(gsub(tools::file_ext(tmpTifOut), "vrt", tmpTifOut))
+  } else {
+    resample_command <- paste0("gdalwarp overwrite -co compress=LZW -tr ",
+                               " ", resolution[1], " ", resolution[2], " -r ",
+                               method," '",inpath, "' '",tmpTifOut,"'")
+    system(resample_command)
   }
-  else {
-    VRT2TIF <- paste0("gdal_translate -co compress=LZW",
-                      " ", gsub(tools::file_ext(tmpTifOut), "vrt", tmpTifOut),
-                      " ", gsub(tools::file_ext(tmpTifOut), "tif", tmpTifOut))
-  }
-  system(resample_command)
-  system(VRT2TIF)
-  unlink(gsub(tools::file_ext(tmpTifOut), "vrt", tmpTifOut))
-  if (isTRUE(returnRaster)) {
+  if (isTRUE(return.raster)) {
     outraster <- raster::raster(tmpTifOut)
     return(outraster)
   }
@@ -500,7 +540,7 @@ gdalResample <- function(inraster, outpath = NULL, resampleRaster = NULL,
 #' @name gdalStitchTitles
 #' @param tilespath  file path to the raster tiles. use "/path/*.tif"
 #' @param outpath file path of output file to generate.
-#' @param large.tif Is the raster very large > 4GB; If so use this call.
+#' @param bigtif Is the raster very large > 4GB; If so use this call.
 #' @param return.raster default TRUE, raster returned to R environment.
 
 #' @export
@@ -508,14 +548,12 @@ gdalResample <- function(inraster, outpath = NULL, resampleRaster = NULL,
 # tilespath <- "/home/woo457/Dropbox/AFMA_cumulative_impacts/data/covariate_data/tmpfolders/*.tif"
 # outpath <- "/home/woo457/Dropbox/AFMA_cumulative_impacts/data/covariate_data/tmpfolders/built_to_split.tif"
 
-gdalStitchTitles <- function(tilespath, outpath, large.tif = TRUE, return.raster = TRUE){
-
-  # tiffies <-list.files(tilespath,full.names = TRUE,pattern = "*tif$")
+gdalStitchTitles <- function(tilespath, outpath, bigtif = TRUE, return.raster = TRUE){
 
   buildVRT <- paste0("gdalbuildvrt", " ", gsub(pkgmaker::file_extension(outpath),
                                                "vrt", outpath), " ", tilespath)
 
-  if (large.tif == TRUE) {
+  if (bigtif == TRUE) {
     VRT2TIF <- paste0("gdal_translate -co compress=LZW -co BIGTIFF=YES",
                       " ", gsub(pkgmaker::file_extension(outpath),
                                 "vrt", outpath), " ", gsub(pkgmaker::file_extension(outpath),

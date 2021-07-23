@@ -5,23 +5,22 @@
 \title{Resample raster to different resolution}
 \usage{
 gdalResample(
-  inraster,
+  inpath,
   outpath = NULL,
-  resampleRaster = NULL,
   resolution = NULL,
   method = "bilinear",
   bigtif = FALSE,
-  returnRaster = TRUE
+  return.raster = TRUE
 )
 }
 \arguments{
-\item{inraster}{file path of inpath file to change.}
+\item{inpath}{file path of inpath file to change.}
 
 \item{outpath}{file path of output file to generate.}
 
 \item{resolution}{desired new resolution for x and y.}
 
-\item{method}{resample method, default is nearest neighbour which is fast but dodgy.}
+\item{method}{resample method, default is nearest neighbour which is fast but dodgy. Options are: "near", "bilinear", "cubic", "cubicspline",}
 
 \item{bigtif}{if TRUE deal with a big geotiff slightly differently.}
 

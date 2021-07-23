@@ -15,7 +15,7 @@ gdalProject(
   extent = NULL,
   ot = "Float32",
   of = "GTiff",
-  returnRaster = TRUE
+  return.raster = TRUE
 )
 }
 \arguments{
@@ -35,7 +35,7 @@ gdalProject(
 
 \item{of}{The file output format, default is "GTiFF".}
 
-\item{returnRaster}{Default TRUE, if TRUE return the processed raster to the R environment.}
+\item{return.raster}{Default TRUE, if TRUE return the processed raster to the R environment.}
 
 \item{s_src}{the EPSG projection of the original raster}
 

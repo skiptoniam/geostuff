@@ -4,14 +4,14 @@
 \alias{gdalStitchTitles}
 \title{Stitch together tiles.}
 \usage{
-gdalStitchTitles(tilespath, outpath, large.tif = TRUE, return.raster = TRUE)
+gdalStitchTitles(tilespath, outpath, bigtif = TRUE, return.raster = TRUE)
 }
 \arguments{
 \item{tilespath}{file path to the raster tiles. use "/path/*.tif"}
 
 \item{outpath}{file path of output file to generate.}
 
-\item{large.tif}{Is the raster very large > 4GB; If so use this call.}
+\item{bigtif}{Is the raster very large > 4GB; If so use this call.}
 
 \item{return.raster}{default TRUE, raster returned to R environment.}
 }
