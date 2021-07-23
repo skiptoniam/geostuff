@@ -10,7 +10,7 @@ gdalReclassify(
   reclassify_list = NULL,
   calc_fun = NULL,
   overwrite = TRUE,
-  return_raster = TRUE
+  return.raster = TRUE
 )
 }
 \arguments{
@@ -22,7 +22,7 @@ gdalReclassify(
 
 \item{calc_fun}{A text function that follows the "https://gdal.org/programs/gdal_calc.html" syntax.}
 
-\item{return_raster}{if TRUE raster will be returned from function call.}
+\item{return.raster}{if TRUE raster will be returned from function call.}
 }
 \description{
 Reclassify raster using gdal_calc

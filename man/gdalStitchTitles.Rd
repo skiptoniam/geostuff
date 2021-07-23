@@ -4,18 +4,16 @@
 \alias{gdalStitchTitles}
 \title{Stitch together tiles.}
 \usage{
-gdalStitchTitles(outpath, tiles_path, return_raster = TRUE, large_tif = TRUE)
+gdalStitchTitles(tilespath, outpath, large.tif = TRUE, return.raster = TRUE)
 }
 \arguments{
+\item{tilespath}{file path to the raster tiles. use "/path/*.tif"}
+
 \item{outpath}{file path of output file to generate.}
 
-\item{return_raster}{if TRUE raster will be returned from function call.}
+\item{large.tif}{Is the raster very large > 4GB; If so use this call.}
 
-\item{inpath}{file path of inpath file to change.}
-
-\item{target}{numeric values to calculate distance from default is zero.}
-
-\item{maxdist}{The maximum distance to be generated. maxdist is in pixels.}
+\item{return.raster}{default TRUE, raster returned to R environment.}
 }
 \description{
 Stitch together tiles.

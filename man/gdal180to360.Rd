@@ -4,14 +4,14 @@
 \alias{gdal180to360}
 \title{Rotate raster from -180/180 to 0/360 degrees}
 \usage{
-gdal180to360(inpath, outpath, return_raster = FALSE)
+gdal180to360(inpath, outpath, return.raster = FALSE)
 }
 \arguments{
 \item{inpath}{file path of inpath file to change.}
 
 \item{outpath}{file path of output file to generate.}
 
-\item{return_raster}{if TRUE raster will be returned from function call.}
+\item{return.raster}{if TRUE raster will be returned from function call.}
 }
 \description{
 Rotate raster from -180/180 to 0/360 degrees

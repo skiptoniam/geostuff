@@ -4,7 +4,7 @@
 \alias{gdalMask}
 \title{Mask function using gdal}
 \usage{
-gdalMask(inpath, mask, outpath, return_raster = FALSE, ...)
+gdalMask(inpath, mask, outpath, return.raster = FALSE, ...)
 }
 \arguments{
 \item{inpath}{file path of the inpath raster}
@@ -13,7 +13,7 @@ gdalMask(inpath, mask, outpath, return_raster = FALSE, ...)
 
 \item{outpath}{file path of the output raster}
 
-\item{return_raster}{if TRUE raster will be returned from function call.}
+\item{return.raster}{if TRUE raster will be returned from function call.}
 }
 \description{
 Mask function using gdal

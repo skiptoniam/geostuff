@@ -15,7 +15,7 @@ gdalCrop(inpath, outpath, extent = NULL, resolution = NULL, return = TRUE)
 
 \item{resolution}{resolution of output raster (usually based on the inpath raster)}
 
-\item{return_raster}{if TRUE raster will be returned from function call.}
+\item{return.raster}{if TRUE raster will be returned from function call.}
 }
 \description{
 Crop function using gdal

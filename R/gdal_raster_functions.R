@@ -3,12 +3,12 @@
 #' @name gdal180to360
 #' @param inpath file path of inpath file to change.
 #' @param outpath file path of output file to generate.
-#' @param return_raster if TRUE raster will be returned from function call.
+#' @param return.raster if TRUE raster will be returned from function call.
 #' @export
 
 #' @importFrom raster raster
 
-gdal180to360 <- function(inpath,outpath,return_raster = FALSE){
+gdal180to360 <- function(inpath,outpath,return.raster = FALSE){
 
   gdal_trans <- Sys.which('gdal_translate')
   gdal_merge <- Sys.which('gdal_merge.py')
@@ -33,7 +33,7 @@ gdal180to360 <- function(inpath,outpath,return_raster = FALSE){
     system(call3)
     system(call4)
   }
-  if (isTRUE(return_raster)) {
+  if (isTRUE(return.raster)) {
     outraster <- raster::raster(outpath)
     return(outraster)
   }
@@ -45,10 +45,10 @@ gdal180to360 <- function(inpath,outpath,return_raster = FALSE){
 #' @param inpath file path of inpath file to change.
 #' @param outpath file path of output file to generate.
 #' @param calc_fun A text function that can be used from numpy, some examples include: "sum", "average", "std", "max", "min"
-#' @param return_raster if TRUE raster will be returned from function call.
+#' @param return.raster if TRUE raster will be returned from function call.
 #' @export
 
-gdalCalc <- function(inpath, outpath, calc_fun="sum", overwrite=TRUE, return_raster=TRUE){
+gdalCalc <- function(inpath, outpath, calc_fun="sum", overwrite=TRUE, return.raster=TRUE){
 
   gdal_calc <- Sys.which('gdal_calc.py')
   if(gdal_calc=='') stop('gdal_calc.py not found on system. Make sure gdal and python installed and visiable to path.')
@@ -81,7 +81,7 @@ gdalCalc <- function(inpath, outpath, calc_fun="sum", overwrite=TRUE, return_ras
   call1 <- sprintf("%s %s --outfile='%s' --calc='numpy.%s([%s], axis=0)' --co=compress=LZW type='Float32' '%s'", gdal_calc, inputs, outpath, calc_fun_in, paste0(LETTERS[seq_len(n)], collapse=','), overwrite)#  $FILE3 $FILE2 $FILE1
   system(call1)
 
-  if(return_raster){
+  if(return.raster){
     r <- raster(outpath)
     return(r)
   }
@@ -153,7 +153,7 @@ gdalClipWithShape <- function(inrast, inshp, outrast=NULL, field=NULL,
 #' @param outpath file path of the output raster
 #' @param extent extent for raster to be cropped to
 #' @param resolution resolution of output raster (usually based on the inpath raster)
-#' @param return_raster if TRUE raster will be returned from function call.
+#' @param return.raster if TRUE raster will be returned from function call.
 #' @export
 #'
 #' @importFrom raster raster
@@ -188,12 +188,12 @@ gdalCrop <- function(inpath, outpath, extent=NULL, resolution=NULL, return = TRU
 #' @param outpath file path of output file to generate.
 #' @param target numeric values to calculate distance from default is zero.
 #' @param maxdist The maximum distance to be generated. maxdist is in pixels.
-#' @param return_raster if TRUE raster will be returned from function call.
+#' @param return.raster if TRUE raster will be returned from function call.
 #' @export
 
 # inpath <- "/home/woo457/Dropbox/AFMA_cumulative_impacts/data/covariate_data/tmpfolders/pcr.tif"
 # outpath <- "/home/woo457/Dropbox/AFMA_cumulative_impacts/data/covariate_data/tmpfolders/popcentresdist_au.tif"
-gdalDistance <- function(inpath, outpath, target=0, maxdist=NULL, return_raster=TRUE){
+gdalDistance <- function(inpath, outpath, target=0, maxdist=NULL, return.raster=TRUE){
   gdal_prox <- Sys.which('gdal_proximity.py')
   if(gdal_prox=='') stop('gdal_proximity.py not found on system.')
 
@@ -209,7 +209,7 @@ gdalDistance <- function(inpath, outpath, target=0, maxdist=NULL, return_raster=
       system(call1)
     }
   }
-  if (isTRUE(return_raster)) {
+  if (isTRUE(return.raster)) {
     outraster <- raster::raster(outpath)
     return(outraster)
   }
@@ -221,12 +221,12 @@ gdalDistance <- function(inpath, outpath, target=0, maxdist=NULL, return_raster=
 #' @param inpath file path of the inpath raster
 #' @param mask path to a mask file which is NA for cells to mask and 1 for cells to keep.
 #' @param outpath file path of the output raster
-#' @param return_raster if TRUE raster will be returned from function call.
+#' @param return.raster if TRUE raster will be returned from function call.
 #' @export
 #'
 #' @importFrom raster raster
 
-gdalMask <- function(inpath, mask, outpath,return_raster = FALSE, ...) {
+gdalMask <- function(inpath, mask, outpath,return.raster = FALSE, ...) {
 
   gdal_calc <- Sys.which('gdal_calc.py')
   if(gdal_calc=='') stop('gdal_calc.py not found on system.')
@@ -242,7 +242,7 @@ gdalMask <- function(inpath, mask, outpath,return_raster = FALSE, ...) {
     system(call2)
     unlink(tmp_rast)
   }
-  if (isTRUE(return_raster)) {
+  if (isTRUE(return.raster)) {
     outraster <- raster::raster(outpath)
     return(outraster)
   }
@@ -387,10 +387,10 @@ gdalRasterise <- function(shp, rast, variable=NULL, bigtif=FALSE) {
 #' @param outpath file path of output file to generate.
 #' @param reclassify_list A list of values to reclassify, the value will be assigned by list index, e.g the first element will be made 1 and so forth. Values associated with that list will be converted to that number.
 #' @param calc_fun A text function that follows the "https://gdal.org/programs/gdal_calc.html" syntax.
-#' @param return_raster if TRUE raster will be returned from function call.
+#' @param return.raster if TRUE raster will be returned from function call.
 #' @export
 
-gdalReclassify <- function(inpath, outpath, reclassify_list=NULL, calc_fun=NULL, overwrite=TRUE, return_raster=TRUE){
+gdalReclassify <- function(inpath, outpath, reclassify_list=NULL, calc_fun=NULL, overwrite=TRUE, return.raster=TRUE){
 
   # if(all(is.null(c(calc_fun,reclassify_list)))) stop("You must provide a calc_fun function or reclassify_list")
 
@@ -430,7 +430,7 @@ gdalReclassify <- function(inpath, outpath, reclassify_list=NULL, calc_fun=NULL,
   call1 <- sprintf("%s -A '%s' --outfile='%s' --calc='%s' --co=compress=LZW '%s'", gdal_calc, inpath, outpath, calc_fun_in, overwrite)#  $FILE3 $FILE2 $FILE1
   system(call1)
 
-  if(return_raster){
+  if(return.raster){
     r <- raster(outpath)
     return(r)
   }
@@ -446,12 +446,12 @@ gdalReclassify <- function(inpath, outpath, reclassify_list=NULL, calc_fun=NULL,
 #' @param resolution desired new resolution for x and y.
 #' @param method resample method, default is nearest neighbour which is fast but dodgy.
 #' @param bigtif if TRUE deal with a big geotiff slightly differently.
-#' @param return_raster if TRUE raster will be returned from function call.
+#' @param return.raster if TRUE raster will be returned from function call.
 #' @export
 
 #' @importFrom raster raster
 
-# gdalResample <- function(inpath, outpath, resolution, method = 'near', bigtif = FALSE, return_raster = FALSE){
+# gdalResample <- function(inpath, outpath, resolution, method = 'near', bigtif = FALSE, return.raster = FALSE){
 gdalResample <- function(inraster, outpath = NULL, resampleRaster = NULL,
                          resolution=NULL, method = 'bilinear', bigtif = FALSE,
                          returnRaster = TRUE){
@@ -498,25 +498,29 @@ gdalResample <- function(inraster, outpath = NULL, resampleRaster = NULL,
 #' @title Stitch together tiles.
 #' @rdname gdalStitchTitles
 #' @name gdalStitchTitles
-#' @param inpath file path of inpath file to change.
+#' @param tilespath  file path to the raster tiles. use "/path/*.tif"
 #' @param outpath file path of output file to generate.
-#' @param target numeric values to calculate distance from default is zero.
-#' @param maxdist The maximum distance to be generated. maxdist is in pixels.
-#' @param return_raster if TRUE raster will be returned from function call.
+#' @param large.tif Is the raster very large > 4GB; If so use this call.
+#' @param return.raster default TRUE, raster returned to R environment.
+
 #' @export
 
+# tilespath <- "/home/woo457/Dropbox/AFMA_cumulative_impacts/data/covariate_data/tmpfolders/*.tif"
+# outpath <- "/home/woo457/Dropbox/AFMA_cumulative_impacts/data/covariate_data/tmpfolders/built_to_split.tif"
 
+gdalStitchTitles <- function(tilespath, outpath, large.tif = TRUE, return.raster = TRUE){
 
-gdalStitchTitles <- function(outpath, tiles_path, return_raster = TRUE, large_tif = TRUE){
+  # tiffies <-list.files(tilespath,full.names = TRUE,pattern = "*tif$")
+
   buildVRT <- paste0("gdalbuildvrt", " ", gsub(pkgmaker::file_extension(outpath),
-                                               "vrt", outpath), " ", tiles_path)
-  if (large_tif == TRUE) {
+                                               "vrt", outpath), " ", tilespath)
+
+  if (large.tif == TRUE) {
     VRT2TIF <- paste0("gdal_translate -co compress=LZW -co BIGTIFF=YES",
                       " ", gsub(pkgmaker::file_extension(outpath),
                                 "vrt", outpath), " ", gsub(pkgmaker::file_extension(outpath),
                                                            "tif", outpath))
-  }
-  else {
+  } else {
     VRT2TIF <- paste0("gdal_translate -co compress=LZW",
                       " ", gsub(pkgmaker::file_extension(outpath),
                                 "vrt", outpath), " ", gsub(pkgmaker::file_extension(outpath),
@@ -526,7 +530,7 @@ gdalStitchTitles <- function(outpath, tiles_path, return_raster = TRUE, large_ti
   system(VRT2TIF)
   unlink(gsub(pkgmaker::file_extension(outpath), "vrt",
               outpath))
-  if (return_raster) {
+  if (return.raster) {
     out <- raster::raster(outpath)
     return(out)
   }
@@ -548,7 +552,7 @@ gdalTiles <- function(inpath, outdir, nx=256, ny=nx){
   gdal_retile <- Sys.which('gdal_retile.py')
   if(gdal_retile=='') stop('gdal_retile.py not found on system.')
 
-  call1 <- sprintf("%s -ps %d %d -targetDir '%s' '%s' compress=LZW", gdal_retile, nx, ny, outdir, inpath)
+  call1 <- sprintf("%s -ps %d %d -targetDir '%s' '%s' -co compress=LZW", gdal_retile, nx, ny, outdir, inpath)
   system(call1)
 
 }

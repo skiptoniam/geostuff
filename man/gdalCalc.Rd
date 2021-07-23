@@ -9,7 +9,7 @@ gdalCalc(
   outpath,
   calc_fun = "sum",
   overwrite = TRUE,
-  return_raster = TRUE
+  return.raster = TRUE
 )
 }
 \arguments{
@@ -19,7 +19,7 @@ gdalCalc(
 
 \item{calc_fun}{A text function that can be used from numpy, some examples include: "sum", "average", "std", "max", "min"}
 
-\item{return_raster}{if TRUE raster will be returned from function call.}
+\item{return.raster}{if TRUE raster will be returned from function call.}
 }
 \description{
 Generic function for using gdal_calc

@@ -25,7 +25,7 @@ gdalResample(
 
 \item{bigtif}{if TRUE deal with a big geotiff slightly differently.}
 
-\item{return_raster}{if TRUE raster will be returned from function call.}
+\item{return.raster}{if TRUE raster will be returned from function call.}
 }
 \description{
 Resample raster to different resolution
