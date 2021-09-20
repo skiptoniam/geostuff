@@ -158,14 +158,6 @@ gdalClipWithShape <- function(inrast, inshp, outrast=NULL, field=NULL,
 #'
 #' @importFrom raster raster
 
-# ff_in <-list.files("/home/woo457/Dropbox/AFMA_cumulative_impacts/data/covariate_data/MARSPEC/", patt='\\.tif$', full.names=TRUE)
-# ff_out <- paste0(tools::file_path_sans_ext(ff_in),"_cropped_au.tif")
-#
-# inpath <- ff_in[1]
-# outpath <- ff_out[1]
-# extent <- c(90, 180, -60, 0)
-# resolution <- c(1/12,1/12)
-
 gdalCrop <- function(inpath, outpath, extent=NULL, resolution=NULL, return.raster = TRUE){
 
   gdalwarp <- Sys.which('gdalwarp')
@@ -365,15 +357,51 @@ gdalProject <- function(inpath, outpath, xres, yres=xres, s_srs, t_srs, resampli
 #' @name gdalRasterise
 #' @param shp local shapefile or file path of the inpath raster
 #' @param rast local shapefile or file path of the output raster
+#' @param res resolution of cells x and y.
+#' @param  ext extent of raster xmin, xmax, ymin, ymax.
 #' @param variable what variable to convert to a raster
+#' @param return.raster return raster? Default is TRUE and function will return a raster object
 #' @export
 
 #' @importFrom raster raster xres yres projection xmin ymin xmax ymax values extent nrow ncol
 #' @importFrom rgdal writeOGR
 
-gdalRasterise <- function(shp, rast, variable=NULL, bigtif=FALSE) {
+gdalRasterise <- function(shp, rast, res=NULL, ext=NULL, variable=NULL, return.raster=TRUE) {
 
-  tmpTif <- tempfile(fileext=".tif")
+  if(is.character(rast)){
+    tmpTif <- rast
+    if(is.null(res)|is.null(ext)){
+      stop("If rast is a file path you must supply res and extent")
+    } else {
+      xrs <- res[1]
+      yrs <- res[2]
+      xmn <- ext[1]
+      ymn <- ext[3]
+      xmx <- ext[2]
+      ymx <- ext[4]
+    }
+   } else {
+    tmpTif <- tempfile(fileext=".tif")
+      if(is.null(res)){
+        xrs <- xres(rast)
+        yrs <- yres(rast)
+       } else {
+        xrs <- res[1]
+        yrs <- res[2]
+      }
+    if(is.null(ext)){
+      xmn <- xmin(rast)
+      ymn <- ymin(rast)
+      xmx <- xmax(rast)
+      ymx <- ymax(rast)
+      } else {
+      xmn <- ext[1]
+      ymn <- ext[3]
+      xmx <- ext[2]
+      ymx <- ext[4]
+    }
+  }
+
 
   if(is.character(shp)){
     tmpShp <- shp
@@ -382,29 +410,26 @@ gdalRasterise <- function(shp, rast, variable=NULL, bigtif=FALSE) {
     rgdal::writeOGR(shp,dirname(tmpShp),gsub("[.]shp","", basename(tmpShp)),driver="ESRI Shapefile",overwrite=TRUE)
   }
 
-  # use gdalPolygonize
   if( is.null(variable) ) {
     system(
-      sprintf( "gdal_rasterize --config GDAL_CACHEMAX 2000 -burn 1 -at -a_nodata -9999 -a_srs '%s' -tr %f %f -te %f %f %f %f '%s' '%s' -co compress=LZW",
-               projection(rast), xres(rast), yres(rast), xmin(rast), ymin(rast), xmax(rast), ymax(rast),
-               tmpShp, tmpTif)
+      sprintf( "gdal_rasterize -burn 1 -at -a_nodata -9999 -tr %f %f -te %f %f %f %f '%s' '%s' -co compress=LZW",
+               xrs, yrs, xmn, ymn, xmx, ymx, tmpShp, tmpTif)
     )
   } else {
     system(
-      sprintf( "gdal_rasterize --config GDAL_CACHEMAX 2000 -a '%s' -at -a_nodata -9999 -a_srs '%s' -tr %f %f -te %f %f %f %f '%s' '%s' -co compress=LZW",
-               variable, projection(rast), xres(rast), yres(rast), xmin(rast), ymin(rast), xmax(rast), ymax(rast),
-               tmpShp, tmpTif)
+      sprintf( "gdal_rasterize  -a '%s' -at -a_nodata -9999 -tr %f %f -te %f %f %f %f '%s' '%s' -co compress=LZW",
+               variable, xrs, yrs, xmn, ymn, xmx, ymx, tmpShp, tmpTif)
     )
   }
 
-  if(bigtif)return(print(tmpTif))
+  # if(bigtif)return(print(tmpTif))
 
   # create a new raster object
-  r.out <- raster(extent(rast), ncols=ncol(rast), nrows=nrow(rast), crs=projection(rast))
-  values(r.out) <- values(raster(tmpTif))
+  if(return.raster)r.out <- raster(tmpTif)
+  else NULL
 
   # free up the data
-  unlink(tmpTif)
+  if(!is.character(shp)) unlink(tmpTif)
   if(!is.character(shp)) unlink(tmpShp)
 
   return(r.out)
@@ -483,13 +508,6 @@ gdalReclassify <- function(inpath, outpath, reclassify_list=NULL, calc_fun=NULL,
 
 #' @importFrom raster raster
 
-# inpath = "/home/woo457/Dropbox/AFMA_cumulative_impacts/data/covariate_data/MARSPEC/MS_bathy_5m_lonlat.tif"
-# outpath = "/home/woo457/Dropbox/AFMA_cumulative_impacts/data/covariate_data/MARSPEC/MS_bathy_lonlat_01res.tif"
-# resolution = c(0.01,0.01)
-# return.raster = TRUE
-# resampleRaster = NULL
-
-# gdalResample <- function(inpath, outpath, resolution, method = 'near', bigtif = FALSE, return.raster = FALSE){
 gdalResample <- function(inpath, outpath = NULL,
                          resolution=NULL,
                          method = 'bilinear', bigtif = FALSE,

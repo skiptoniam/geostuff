@@ -39,9 +39,5 @@ ogrBBoxClip <- function(inshp, outshp=NULL, ext, returnShape=TRUE) {
   return(retshp)
 }
 
-# inshp <-"/home/woo457/Dropbox/NESP SS2/GIS-DATA/Australia/australia-boundary-clip-marine.shp"
-# inrast <- "/home/woo457/Dropbox/NESP SS2/Pressures/Pressures2020Processed//Land-use_intensification/Point discharges/NESP_NOD_TSS_exp_smoothed_SpatiallyProcessed.tif"
-# outrast <- NULL
-
 
 

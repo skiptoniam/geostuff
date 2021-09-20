@@ -4,14 +4,27 @@
 \alias{gdalRasterise}
 \title{Faster rasterisation of shapefile to raster using gdal}
 \usage{
-gdalRasterise(shp, rast, variable = NULL, bigtif = FALSE)
+gdalRasterise(
+  shp,
+  rast,
+  res = NULL,
+  ext = NULL,
+  variable = NULL,
+  return.raster = TRUE
+)
 }
 \arguments{
 \item{shp}{local shapefile or file path of the inpath raster}
 
 \item{rast}{local shapefile or file path of the output raster}
 
+\item{res}{resolution of cells x and y.}
+
+\item{ext}{extent of raster xmin, xmax, ymin, ymax.}
+
 \item{variable}{what variable to convert to a raster}
+
+\item{return.raster}{return raster? Default is TRUE and function will return a raster object}
 }
 \description{
 Faster rasterisation of shapefile to raster using gdal
