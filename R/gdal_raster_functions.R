@@ -187,8 +187,6 @@ gdalCrop <- function(inpath, outpath, extent=NULL, resolution=NULL, return.raste
 #' @param return.raster if TRUE raster will be returned from function call.
 #' @export
 
-# inpath <- "/home/woo457/Dropbox/AFMA_cumulative_impacts/data/covariate_data/tmpfolders/pcr.tif"
-# outpath <- "/home/woo457/Dropbox/AFMA_cumulative_impacts/data/covariate_data/tmpfolders/popcentresdist_au.tif"
 gdalDistance <- function(inpath, outpath, target=0, maxdist=NULL, return.raster=TRUE){
   gdal_prox <- Sys.which('gdal_proximity.py')
   if(gdal_prox=='') stop('gdal_proximity.py not found on system.')
@@ -222,8 +220,6 @@ gdalDistance <- function(inpath, outpath, target=0, maxdist=NULL, return.raster=
 #'
 #' @importFrom raster raster
 
-
-
 gdalMask <- function(inpath, mask, outpath, quiet=TRUE) {
   gdal_calc <- Sys.which('gdal_calc.py')
   if(gdal_calc=='') stop('gdal_calc.py not found on system.')
@@ -246,30 +242,30 @@ gdalMask <- function(inpath, mask, outpath, quiet=TRUE) {
 # ff_in <- list.files('unmasked', patt='\\.tif$', full.names=TRUE)
 # ff_out <- sub('unmasked', 'masked', ff_in)
 # system.time(mapply(gdal_mask, ff_in, 'mask.tif', ff_out))
-
-
-
-gdalMask <- function(inpath, mask, outpath,return.raster = FALSE, ...) {
-
-  gdal_calc <- Sys.which('gdal_calc.py')
-  if(gdal_calc=='') stop('gdal_calc.py not found on system.')
-  if(!file.exists(outpath)) {
-    feature_dir <- base::tempfile("");
-    base::dir.create(feature_dir);
-    rand_fname <- base::tempfile("tmp", feature_dir);
-    tmp_rast <- base::paste0(rand_fname, ".tif");
-    message('Masking ', basename(outpath))
-    call1 <- sprintf('python %s -A %s --outpath=%s --calc="A*(A>-9999)" --NoDataValue=-9999',  gdal_calc, inpath, tmp_rast)
-    call2 <- sprintf('python %s --co="compress=LZW" -A %s -B %s --outpath=%s --calc="(A*(A>0))*(B*(B>0))" --NoDataValue=0',  gdal_calc, tmp_rast, mask, outpath)
-    system(call1)
-    system(call2)
-    unlink(tmp_rast)
-  }
-  if (isTRUE(return.raster)) {
-    outraster <- raster::raster(outpath)
-    return(outraster)
-  }
-}
+#
+#
+#
+# gdalMask <- function(inpath, mask, outpath,return.raster = FALSE, ...) {
+#
+#   gdal_calc <- Sys.which('gdal_calc.py')
+#   if(gdal_calc=='') stop('gdal_calc.py not found on system.')
+#   if(!file.exists(outpath)) {
+#     feature_dir <- base::tempfile("");
+#     base::dir.create(feature_dir);
+#     rand_fname <- base::tempfile("tmp", feature_dir);
+#     tmp_rast <- base::paste0(rand_fname, ".tif");
+#     message('Masking ', basename(outpath))
+#     call1 <- sprintf('python %s -A %s --outpath=%s --calc="A*(A>-9999)" --NoDataValue=-9999',  gdal_calc, inpath, tmp_rast)
+#     call2 <- sprintf('python %s --co="compress=LZW" -A %s -B %s --outpath=%s --calc="(A*(A>0))*(B*(B>0))" --NoDataValue=0',  gdal_calc, tmp_rast, mask, outpath)
+#     system(call1)
+#     system(call2)
+#     unlink(tmp_rast)
+#   }
+#   if (isTRUE(return.raster)) {
+#     outraster <- raster::raster(outpath)
+#     return(outraster)
+#   }
+# }
 
 #' @title Split a multiband raster into multiple single files.
 #' @rdname gdalMultiband2Singles
@@ -358,7 +354,7 @@ gdalProject <- function(inpath, outpath, xres, yres=xres, s_srs, t_srs, resampli
 #' @param shp local shapefile or file path of the inpath raster
 #' @param rast local shapefile or file path of the output raster
 #' @param res resolution of cells x and y.
-#' @param  ext extent of raster xmin, xmax, ymin, ymax.
+#' @param ext extent of raster xmin, xmax, ymin, ymax.
 #' @param variable what variable to convert to a raster
 #' @param return.raster return raster? Default is TRUE and function will return a raster object
 #' @export
@@ -381,6 +377,7 @@ gdalRasterise <- function(shp, rast, res=NULL, ext=NULL, variable=NULL, return.r
       ymx <- ext[4]
     }
    } else {
+     if(!is.raster(rast))stop("Raster must be a raster object or a valid path to a raster file.")
     tmpTif <- tempfile(fileext=".tif")
       if(is.null(res)){
         xrs <- xres(rast)
@@ -429,7 +426,7 @@ gdalRasterise <- function(shp, rast, res=NULL, ext=NULL, variable=NULL, return.r
   else NULL
 
   # free up the data
-  if(!is.character(shp)) unlink(tmpTif)
+  if(!is.character(rast)) unlink(tmpTif)
   if(!is.character(shp)) unlink(tmpShp)
 
   return(r.out)
@@ -505,7 +502,6 @@ gdalReclassify <- function(inpath, outpath, reclassify_list=NULL, calc_fun=NULL,
 #' @param bigtif if TRUE deal with a big geotiff slightly differently.
 #' @param return.raster if TRUE raster will be returned from function call.
 #' @export
-
 #' @importFrom raster raster
 
 gdalResample <- function(inpath, outpath = NULL,
