@@ -1,6 +1,6 @@
-Package: sense
+Package: geostuff
 Type: Package
-Title: sense is a R package which does spatial manipulation of remotely sensed and spatial data using gdal libaries to speed up large data.
+Title: geostuff is a R package which does spatial manipulation of remotely sensed and spatial data using gdal and ocm libaries to speed up large data.
 Version: 0.1.0
 Author: Skipton Woolley
 Maintainer: Skipton Woolley <skipton.woolley@unimelb.edu.au>

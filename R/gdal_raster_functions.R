@@ -220,7 +220,7 @@ gdalDistance <- function(inpath, outpath, target=0, maxdist=NULL, return.raster=
 #'
 #' @importFrom raster raster
 
-gdalMask <- function(inpath, mask, outpath, quiet=TRUE) {
+gdalMask <- function(inpath, mask, outpath, quiet=TRUE, return.raster = FALSE) {
   gdal_calc <- Sys.which('gdal_calc.py')
   if(gdal_calc=='') stop('gdal_calc.py not found on system.')
   if(!file.exists(outpath)) {

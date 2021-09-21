@@ -4,7 +4,7 @@
 \alias{gdalMask}
 \title{Mask function using gdal}
 \usage{
-gdalMask(inpath, mask, outpath, return.raster = FALSE, ...)
+gdalMask(inpath, mask, outpath, quiet = TRUE, return.raster = FALSE)
 }
 \arguments{
 \item{inpath}{file path of the inpath raster}
