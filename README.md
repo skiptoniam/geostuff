@@ -1,2 +1,2 @@
-# sense
-My R package for using gdal libraries in R. It's a moving feast. 
+# geostuff (formally sense)
+My R package for using gdal and ocm libraries in R. It's a moving feast. 
