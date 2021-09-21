@@ -364,6 +364,7 @@ gdalProject <- function(inpath, outpath, xres, yres=xres, s_srs, t_srs, resampli
 
 gdalRasterise <- function(shp, rast, res=NULL, ext=NULL, variable=NULL, return.raster=TRUE) {
 
+  if(!is.null(res)&length(res)==1) res <- rep(res,2)
   if(is.character(rast)){
     tmpTif <- rast
     if(is.null(res)|is.null(ext)){
@@ -423,7 +424,7 @@ gdalRasterise <- function(shp, rast, res=NULL, ext=NULL, variable=NULL, return.r
 
   # create a new raster object
   if(return.raster)r.out <- raster(tmpTif)
-  else NULL
+  else r.out <- NULL
 
   # free up the data
   if(!is.character(rast)) unlink(tmpTif)
