@@ -598,7 +598,6 @@ gdalStitchTitles <- function(tilespath, outpath, bigtif = TRUE, return.raster = 
 #' @param ny The number of x direction pixels per tile
 #' @export
 
-
 gdalTiles <- function(inpath, outdir, nx=256, ny=nx){
 
   gdal_retile <- Sys.which('gdal_retile.py')
