@@ -589,7 +589,7 @@ gdalStitchTitles <- function(tilespath, outpath, bigtif = TRUE, return.raster = 
 }
 
 
-#' @title Calculate distance raster using gdal
+#' @title Calculate distance raster using gdal blah
 #' @rdname gdalTiles
 #' @name gdalTiles
 #' @param inpath file path of inpath file to change.
@@ -607,7 +607,6 @@ gdalTiles <- function(inpath, outdir, nx=256, ny=nx){
   system(call1)
 
 }
-
 
 #' @export
 is.raster <- function(x){
