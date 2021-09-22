@@ -9,7 +9,9 @@ gdalRasterise(
   rast,
   res = NULL,
   ext = NULL,
+  pixels = NULL,
   variable = NULL,
+  invert = FALSE,
   return.raster = TRUE
 )
 }
@@ -24,7 +26,11 @@ gdalRasterise(
 
 \item{variable}{what variable to convert to a raster}
 
+\item{invert}{If TRUE rasterise the inverse of the shapefile. Default is FALSE.}
+
 \item{return.raster}{return raster? Default is TRUE and function will return a raster object}
+
+\item{pixel}{Number of pixels in x and y direction. This is an alternative to res.}
 }
 \description{
 Faster rasterisation of shapefile to raster using gdal

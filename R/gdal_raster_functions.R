@@ -355,20 +355,29 @@ gdalProject <- function(inpath, outpath, xres, yres=xres, s_srs, t_srs, resampli
 #' @param rast local shapefile or file path of the output raster
 #' @param res resolution of cells x and y.
 #' @param ext extent of raster xmin, xmax, ymin, ymax.
+#' @param pixel Number of pixels in x and y direction. This is an alternative to res.
 #' @param variable what variable to convert to a raster
+#' @param invert If TRUE rasterise the inverse of the shapefile. Default is FALSE.
 #' @param return.raster return raster? Default is TRUE and function will return a raster object
 #' @export
 
 #' @importFrom raster raster xres yres projection xmin ymin xmax ymax values extent nrow ncol
 #' @importFrom rgdal writeOGR
 
-gdalRasterise <- function(shp, rast, res=NULL, ext=NULL, variable=NULL, return.raster=TRUE) {
+gdalRasterise <- function(shp, rast, res=NULL, ext=NULL,
+                          pixels=NULL, variable=NULL, invert = FALSE, return.raster=TRUE) {
 
   if(!is.null(res)&length(res)==1) res <- rep(res,2)
+  if(invert)inv <- "-i"
+  else inv <- ""
+
+  if(!is.null(pixels)&length(pixels)!=2)
+    stop("If using 'pixels' the input should be the number of pixels in the x and y direction. This argument cannot be used with res.")
+
   if(is.character(rast)){
     tmpTif <- rast
-    if(is.null(res)|is.null(ext)){
-      stop("If rast is a file path you must supply res and extent")
+    if(is.null(res)&is.null(ext)&is.null(pixels)){
+      stop("If rast is a file path you must supply 'res' & 'extent' or 'pixels' & 'extent'")
     } else {
       xrs <- res[1]
       yrs <- res[2]
@@ -409,15 +418,24 @@ gdalRasterise <- function(shp, rast, res=NULL, ext=NULL, variable=NULL, return.r
   }
 
   if( is.null(variable) ) {
-    system(
-      sprintf( "gdal_rasterize -burn 1 -at -a_nodata -9999 -tr %f %f -te %f %f %f %f '%s' '%s' -co compress=LZW",
-               xrs, yrs, xmn, ymn, xmx, ymx, tmpShp, tmpTif)
-    )
+
+    if(is.null(pixels)){
+      callnovar <- sprintf( "gdal_rasterize -burn 1 -at %s -a_nodata -9999 -tr %f %f -te %f %f %f %f '%s' '%s' -co compress=LZW",
+                        invert, xrs, yrs, xmn, ymn, xmx, ymx, tmpShp, tmpTif)
+    } else {
+      callnovar <- sprintf( "gdal_rasterize -burn 1 -at %s -a_nodata -9999 -ts %f %f -te %f %f %f %f '%s' '%s' -co compress=LZW",
+                            inv, pixels[1], pixels[2], xmn, ymn, xmx, ymx, tmpShp, tmpTif)
+    }
+    system(callnovar)
   } else {
-    system(
-      sprintf( "gdal_rasterize  -a '%s' -at -a_nodata -9999 -tr %f %f -te %f %f %f %f '%s' '%s' -co compress=LZW",
-               variable, xrs, yrs, xmn, ymn, xmx, ymx, tmpShp, tmpTif)
-    )
+    if(is.null(pixels)){
+      callvar <- sprintf( "gdal_rasterize  -a '%s' -at  %s -a_nodata -9999 -tr %f %f -te %f %f %f %f '%s' '%s' -co compress=LZW",
+                          inv, variable, xrs, yrs, xmn, ymn, xmx, ymx, tmpShp, tmpTif)
+    } else {
+      callvar <- sprintf( "gdal_rasterize  -a '%s' -at  %s -a_nodata -9999 -ts %f %f -te %f %f %f %f '%s' '%s' -co compress=LZW",
+                          inv, variable, pixels[1], pixels[2], xmn, ymn, xmx, ymx, tmpShp, tmpTif)
+    }
+    system(callvar)
   }
 
   # if(bigtif)return(print(tmpTif))
