@@ -317,8 +317,8 @@ gdalMultiband2Singles <- function(inpath, outdir=NULL, bands=NULL, return_list =
 
 
 #' @title Faster reprojectiom of rasters using gdal
-#' @rdname gdalProject
-#' @name gdalProject
+#' @rdname gdalReproject
+#' @name gdalReproject
 #' @param inpath file path of the inpath raster
 #' @param outpath file path of the output raster
 #' @param xres resolution of output raster x direction.
@@ -332,14 +332,12 @@ gdalMultiband2Singles <- function(inpath, outdir=NULL, bands=NULL, return_list =
 #' @param return.raster Default TRUE, if TRUE return the processed raster to the R environment.
 #' @export
 
-gdalProject <- function(inpath, outpath, xres, yres=xres, s_srs, t_srs, resampling= "bilinear",
+gdalReproject <- function(inpath, outpath, xres, yres=xres, s_srs, t_srs, resampling= "bilinear",
                         extent=NULL, ot = "Float32", of='GTiff', return.raster = TRUE) {
 
-  outpath <- file.path(normalizePath(tempdir()), basename(outpath))
-  system(sprintf('gdalwarp -ot %s -s_srs "%s" -t_srs "%s" -r %s -multi %s -tr %s -dstnodata -9999 -of %s "%s" "%s" compress=LZW',
-                 ot, s_srs, t_srs, resampling,
-                 if(!is.null(extent)) paste(c('-te', extent[1],extent[3],extent[2],extent[4]), collapse=' ') else '',
-                 paste(xres, yres), of, inpath, outpath))
+  # outpath <- file.path(normalizePath(tempdir()), basename(outpath))
+  system(sprintf('gdalwarp -overwrite -ot %s -s_srs "%s" -t_srs "%s" -r %s -te %s %s %s %s -tr %s -dstnodata -9999 -of %s "%s" "%s" -co compress=LZW',
+                 ot, s_srs, t_srs, resampling, extent[1],extent[3],extent[2],extent[4], paste(xres, yres), of, inpath, outpath))
 
   if (isTRUE(return.raster)) {
     outraster <- raster::raster(outpath)
@@ -364,8 +362,8 @@ gdalProject <- function(inpath, outpath, xres, yres=xres, s_srs, t_srs, resampli
 #' @importFrom raster raster xres yres projection xmin ymin xmax ymax values extent nrow ncol
 #' @importFrom rgdal writeOGR
 
-gdalRasterise <- function(shp, rast, res=NULL, ext=NULL,
-                          pixels=NULL, variable=NULL, invert = FALSE, return.raster=TRUE) {
+gdalRasterise <- function(shp, rast, res=NULL, ext=NULL, pixels=NULL,
+                          variable=NULL, invert = FALSE, return.raster=TRUE) {
 
   if(!is.null(res)&length(res)==1) res <- rep(res,2)
   if(invert)inv <- "-i"
@@ -420,20 +418,20 @@ gdalRasterise <- function(shp, rast, res=NULL, ext=NULL,
   if( is.null(variable) ) {
 
     if(is.null(pixels)){
-      callnovar <- sprintf( "gdal_rasterize -burn 1 -at %s -a_nodata -9999 -tr %f %f -te %f %f %f %f '%s' '%s' -co compress=LZW",
-                        invert, xrs, yrs, xmn, ymn, xmx, ymx, tmpShp, tmpTif)
+      callnovar <- sprintf( "gdal_rasterize -burn 1 -at -a_nodata -9999 -tr %f %f -te %f %f %f %f '%s' '%s' -co compress=LZW",
+                          xrs, yrs, xmn, ymn, xmx, ymx, tmpShp, tmpTif)
     } else {
-      callnovar <- sprintf( "gdal_rasterize -burn 1 -at %s -a_nodata -9999 -ts %f %f -te %f %f %f %f '%s' '%s' -co compress=LZW",
-                            inv, pixels[1], pixels[2], xmn, ymn, xmx, ymx, tmpShp, tmpTif)
+      callnovar <- sprintf( "gdal_rasterize -burn 1 -at -a_nodata -9999 -ts %f %f -te %f %f %f %f '%s' '%s' -co compress=LZW",
+                           pixels[1], pixels[2], xmn, ymn, xmx, ymx, tmpShp, tmpTif)
     }
     system(callnovar)
   } else {
     if(is.null(pixels)){
-      callvar <- sprintf( "gdal_rasterize  -a '%s' -at  %s -a_nodata -9999 -tr %f %f -te %f %f %f %f '%s' '%s' -co compress=LZW",
-                          inv, variable, xrs, yrs, xmn, ymn, xmx, ymx, tmpShp, tmpTif)
+      callvar <- sprintf( "gdal_rasterize  -a '%s' -at -a_nodata -9999 -tr %f %f -te %f %f %f %f '%s' '%s' -co compress=LZW",
+                          variable, xrs, yrs, xmn, ymn, xmx, ymx, tmpShp, tmpTif)
     } else {
-      callvar <- sprintf( "gdal_rasterize  -a '%s' -at  %s -a_nodata -9999 -ts %f %f -te %f %f %f %f '%s' '%s' -co compress=LZW",
-                          inv, variable, pixels[1], pixels[2], xmn, ymn, xmx, ymx, tmpShp, tmpTif)
+      callvar <- sprintf( "gdal_rasterize  -a '%s' -at  -a_nodata -9999 -ts %f %f -te %f %f %f %f '%s' '%s' -co compress=LZW",
+                          variable, pixels[1], pixels[2], xmn, ymn, xmx, ymx, tmpShp, tmpTif)
     }
     system(callvar)
   }
