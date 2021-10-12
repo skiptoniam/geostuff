@@ -402,7 +402,9 @@ gdalIQR <- function(inpath, outpath, overwrite=TRUE, return.raster=TRUE, quiet=F
     n <- length(inpath)
   }
 
-  call1 <- sprintf("%s %s --outfile='%s' --calc='numpy.quantile([%s], 0.75, axis=0)-numpy.quantile([%s], 0.25, axis=0)' --co=compress=LZW '%s' %s", gdal_calc, inputs, outpath, paste0(LETTERS[seq_len(n)], collapse=','), overwrite, quiet.call)
+  call1 <- sprintf("%s %s --outfile='%s' --calc='numpy.quantile([%s], 0.75, axis=0)-numpy.quantile([%s], 0.25, axis=0)' --co=compress=LZW '%s' %s",
+                   gdal_calc, inputs, outpath, paste0(LETTERS[seq_len(n)], collapse=','),
+                   paste0(LETTERS[seq_len(n)], collapse=','), overwrite, quiet.call)
   system(call1)
 
   if(return.raster){
