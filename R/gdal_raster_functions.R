@@ -385,8 +385,6 @@ gdalIQR <- function(inpath, outpath, overwrite=TRUE, return.raster=TRUE, quiet=F
   if(quiet)quiet.call <- "--quiet"
   else quiet.call <- ""
 
-  if(!quant>0|!quant<1) stop('quant should be (0,1)')
-
   nbands <- suppressWarnings(sapply(inpath, function(x) nrow(attr(rgdal::GDALinfo(x), 'df'))))
   if(length(inpath) > 26 || nbands > 26) stop('Maximum number of inputs is 26.')
   if(length(nbands) > 1 & any(nbands > 1))
