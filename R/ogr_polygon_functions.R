@@ -40,4 +40,23 @@ ogrBBoxClip <- function(inshp, outshp=NULL, ext, returnShape=TRUE) {
 }
 
 
+#' @title Merge multple shapefiles
+#' @rdname mergeOGR
+#' @name mergeOGR
+#' @param infile.list A list of path files that points to shape files
+#' @param outfile The path to shapefile you wish to write too
+#' @export
+
+
+mergeOGR <- function(infiles.list,outfile){
+
+  if(!is.list(infiles.list))stop("infiles.list should be a list of shapefile paths.")
+  if(length(infiles.list)<2)stop("infiles.list should have more that one shapefile to merge")
+
+  system(sprintf("ogr2ogr -f 'ESRI Shapefile' '%s' '%s'",outfile,infiles.list[[1]]))
+  for(i in 2:length(infiles.list)){
+    system(sprintf("ogr2ogr -f 'ESRI Shapefile' -update -append '%s' '%s'",outfile,infiles.list[[i]]))
+  }
+
+}
 

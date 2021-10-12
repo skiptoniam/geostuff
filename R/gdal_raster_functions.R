@@ -47,13 +47,21 @@ gdal180to360 <- function(inpath,outpath,return.raster = FALSE){
 #' @param calc_fun A text function that can be used from numpy, some examples include: "sum", "average", "std", "max", "min"
 #' @param return.raster if TRUE raster will be returned from function call.
 #' @export
+#'
 
-gdalCalc <- function(inpath, outpath, calc_fun="sum", overwrite=TRUE, return.raster=TRUE){
+gdalCalc <- function(inpath, outpath, calc_fun="sum", numpy=TRUE,
+                     na.value=NULL, overwrite=TRUE, return.raster=TRUE,
+                     quiet=FALSE){
 
   gdal_calc <- Sys.which('gdal_calc.py')
   if(gdal_calc=='') stop('gdal_calc.py not found on system. Make sure gdal and python installed and visiable to path.')
   if(overwrite)overwrite <- "--overwrite"
   else overwrite <- ""
+
+  if(quiet)quiet.call <- "--quiet"
+  else quiet.call <- ""
+  # if(is.null(na.value)) na.call <- ""
+  # else na.call <- paste0("--NoDataValue=",na.value)
 
   if (!is.null(calc_fun)){
     calc_fun_in <- calc_fun
@@ -78,7 +86,8 @@ gdalCalc <- function(inpath, outpath, calc_fun="sum", overwrite=TRUE, return.ras
   }
 
   message('Calculating ',calc_fun,' and writing to ', basename(outpath))
-  call1 <- sprintf("%s %s --outpath='%s' --calc='numpy.%s([%s], axis=0)' --co=compress=LZW type='Float32' '%s'", gdal_calc, inputs, outpath, calc_fun_in, paste0(LETTERS[seq_len(n)], collapse=','), overwrite)#  $FILE3 $FILE2 $FILE1
+  if(numpy) call1 <- sprintf("%s %s --outfile='%s' --calc='numpy.%s([%s], axis=0)' --co=compress=LZW '%s' %s", gdal_calc, inputs, outpath, calc_fun_in, paste0(LETTERS[seq_len(n)], collapse=','), overwrite,quiet.call)
+  else call1 <- sprintf("%s %s --outfile='%s' --calc='%s' --co=compress=LZW '%s' %s", gdal_calc, inputs, outpath, calc_fun_in, overwrite,quiet.call)#  $FILE3 $FILE2 $FILE1
   system(call1)
 
   if(return.raster){
@@ -184,14 +193,32 @@ gdalCrop <- function(inpath, outpath, extent=NULL, resolution=NULL, return.raste
 #' @param outpath file path of output file to generate.
 #' @param target numeric values to calculate distance from default is zero.
 #' @param maxdist The maximum distance to be generated. maxdist is in pixels.
+#' @param bigtif If the raster is large you might need to use this call.
 #' @param return.raster if TRUE raster will be returned from function call.
 #' @export
 
-gdalDistance <- function(inpath, outpath, target=0, maxdist=NULL, return.raster=TRUE){
+gdalDistance <- function(inpath, outpath, target=0, maxdist=NULL, bigtif=FALSE, return.raster=TRUE){
   gdal_prox <- Sys.which('gdal_proximity.py')
   if(gdal_prox=='') stop('gdal_proximity.py not found on system.')
 
   if(is.null(target))target <- 0
+
+  if(bigtif){
+
+  if(is.null(maxdist)){
+    if(!file.exists(outpath)){
+      call1 <- sprintf('%s %s %s -values %d -of GTiff -distunits GEO -nodata -9999 -co compress=LZW -co BIGTIFF=YES', gdal_prox, inpath, outpath, target)
+      system(call1)
+    }
+  } else {
+    if(!file.exists(outpath)){
+      call1 <- sprintf('%s %s %s -values %d -maxdist %d -distunits GEO -nodata -9999 -of GTiff -co compress=LZW -co BIGTIFF=YES -overwrite', gdal_prox, inpath, outpath, target, maxdist)
+      system(call1)
+    }
+  }
+
+  } else {
+
   if(is.null(maxdist)){
     if(!file.exists(outpath)){
       call1 <- sprintf('%s %s %s -values %d -of GTiff -distunits GEO -nodata -9999 -co compress=LZW', gdal_prox, inpath, outpath, target)
@@ -203,8 +230,32 @@ gdalDistance <- function(inpath, outpath, target=0, maxdist=NULL, return.raster=
       system(call1)
     }
   }
+
+  }
+
   if (isTRUE(return.raster)) {
     outraster <- raster::raster(outpath)
+    return(outraster)
+  }
+}
+
+#' @title Mask function using gdal
+#' @rdname gdalEdit
+#' @name gdalEdit
+#' @param inpath file path of the inpath raster
+#' @param scale path to a mask file which is NA for cells to mask and 1 for cells to keep.
+#' @param offset file path of the output raster
+#' @param return.raster if TRUE raster will be returned from function call.
+#' @export
+#'
+#' @importFrom raster raster
+
+gdalEdit <- function(inpath,scale,offset,return.raster=TRUE){
+
+  call1 <- sprintf('gdal_edit.py -scale %s -offset %s "%s"', scale, offset, inpath)
+  system(call1)
+  if (isTRUE(return.raster)) {
+    outraster <- raster::raster(inpath)
     return(outraster)
   }
 }
@@ -314,6 +365,52 @@ gdalMultiband2Singles <- function(inpath, outdir=NULL, bands=NULL, return_list =
 
 }
 
+#' @title Calculate inter quartile range using gdal_calc
+#' @rdname gdalIQR
+#' @name gdalIQR
+#' @param inpath file path of inpath file to change.
+#' @param outpath file path of output file to generate.
+#' @param overwrite Overwrite the existing raster?
+#' @param return.raster if TRUE raster will be returned from function call.
+#' @param quiet Do processing quietly?
+#' @export
+
+gdalIQR <- function(inpath, outpath, overwrite=TRUE, return.raster=TRUE, quiet=FALSE){
+
+  gdal_calc <- Sys.which('gdal_calc.py')
+  if(gdal_calc=='') stop('gdal_calc.py not found on system. Make sure gdal and python installed and visiable to path.')
+  if(overwrite)overwrite <- "--overwrite"
+  else overwrite <- ""
+
+  if(quiet)quiet.call <- "--quiet"
+  else quiet.call <- ""
+
+  if(!quant>0|!quant<1) stop('quant should be (0,1)')
+
+  nbands <- suppressWarnings(sapply(inpath, function(x) nrow(attr(rgdal::GDALinfo(x), 'df'))))
+  if(length(inpath) > 26 || nbands > 26) stop('Maximum number of inputs is 26.')
+  if(length(nbands) > 1 & any(nbands > 1))
+    warning('One or more rasters have multiple bands. First band used.')
+
+  if(length(inpath)==1) {
+    inputs <- paste0('-', LETTERS[seq_len(nbands)], ' ', shQuote(inpath), ' --',
+                     LETTERS[seq_len(nbands)], '_band ', seq_len(nbands), collapse=' ')
+    n <- nbands
+  } else {
+    inputs <- paste0('-', LETTERS[seq_along(nbands)], ' ', shQuote(inpath), ' --',
+                     LETTERS[seq_along(nbands)], '_band 1', collapse=' ')
+    n <- length(inpath)
+  }
+
+  call1 <- sprintf("%s %s --outfile='%s' --calc='numpy.quantile([%s], 0.75, axis=0)-numpy.quantile([%s], 0.25, axis=0)' --co=compress=LZW '%s' %s", gdal_calc, inputs, outpath, paste0(LETTERS[seq_len(n)], collapse=','), overwrite, quiet.call)
+  system(call1)
+
+  if(return.raster){
+    r <- raster(outpath)
+    return(r)
+  }
+
+}
 
 
 #' @title Faster reprojectiom of rasters using gdal
@@ -497,7 +594,7 @@ gdalReclassify <- function(inpath, outpath, reclassify_list=NULL, calc_fun=NULL,
     stop("You must provide a calc_fun function or reclassify_list\n")
   }
 
-  call1 <- sprintf("%s -A '%s' --outpath='%s' --calc='%s' --co=compress=LZW '%s'", gdal_calc, inpath, outpath, calc_fun_in, overwrite)#  $FILE3 $FILE2 $FILE1
+  call1 <- sprintf("%s -A '%s' --outfile='%s' --calc='%s' --co=compress=LZW '%s'", gdal_calc, inpath, outpath, calc_fun_in, overwrite)#  $FILE3 $FILE2 $FILE1
   system(call1)
 
   if(return.raster){

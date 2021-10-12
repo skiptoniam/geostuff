@@ -4,7 +4,14 @@
 \alias{gdalDistance}
 \title{Calculate distance raster using gdal}
 \usage{
-gdalDistance(inpath, outpath, target = 0, maxdist = NULL, return.raster = TRUE)
+gdalDistance(
+  inpath,
+  outpath,
+  target = 0,
+  maxdist = NULL,
+  bigtif = FALSE,
+  return.raster = TRUE
+)
 }
 \arguments{
 \item{inpath}{file path of inpath file to change.}
@@ -14,6 +21,8 @@ gdalDistance(inpath, outpath, target = 0, maxdist = NULL, return.raster = TRUE)
 \item{target}{numeric values to calculate distance from default is zero.}
 
 \item{maxdist}{The maximum distance to be generated. maxdist is in pixels.}
+
+\item{bigtif}{If the raster is large you might need to use this call.}
 
 \item{return.raster}{if TRUE raster will be returned from function call.}
 }

@@ -8,8 +8,11 @@ gdalCalc(
   inpath,
   outpath,
   calc_fun = "sum",
+  numpy = TRUE,
+  na.value = NULL,
   overwrite = TRUE,
-  return.raster = TRUE
+  return.raster = TRUE,
+  quiet = FALSE
 )
 }
 \arguments{
