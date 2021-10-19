@@ -260,6 +260,78 @@ gdalEdit <- function(inpath,scale,offset,return.raster=TRUE){
   }
 }
 
+#' @title Extract raster values from points.
+#' @rdname gdalExtract
+#' @name gdalExtract
+#' @param inrasters file path(s) of rasters to extract values
+#' @param pts Coordinates of points to extract raster values.
+#' @param simplify Logical. If \code{TRUE}, then if all files referred to in
+#'   \code{srcfile} are single band rasters, the sampled values will be
+#'   simplified to a matrix.
+#' @param sp Logical. If \code{TRUE}, a \code{SpatialPointsDataFrame} will be
+#'   returned, otherwise a \code{data.frame} will be returned.
+#' @export
+
+gdalExtract <- function(inrasters, pts, simplify=TRUE, sp=FALSE) {
+  tryCatch(suppressWarnings(system('gdallocationinfo', intern=TRUE)),
+           error=function(e) {
+             stop('GDAL is not installed, ',
+                  'or gdallocationinfo is not available on PATH.')
+           })
+  stopifnot(all(file.exists(inrasters)))
+  if(is(pts, 'SpatialPoints')) {
+    p4s <- proj4string(pts)
+    pts <- coordinates(pts)
+  } else {
+    p4s <- NA_character_
+  }
+  xy <- do.call(paste, as.data.frame(pts))
+  vals <- setNames(lapply(inrasters, function(f) {
+    meta <- attr(rgdal::GDALinfo(f, returnStats=FALSE, returnRAT=FALSE,
+                                 returnColorTable=FALSE), 'df')
+    nbands <- nrow(meta)
+    nodata <- ifelse(meta$hasNoDataValue, meta$NoDataValue, NA)
+    if(any(is.na(nodata))) {
+      warning('NoData value not identified for one or more bands of ', f,
+              '. Interpret values accordingly. See ?nodata.', call. = FALSE)
+    }
+    message(sprintf('Querying %sraster data: %s',
+                    ifelse(nbands > 1, 'multiband ', ''), f))
+    v <- system(sprintf('gdallocationinfo -valonly "%s" -geoloc', f),
+                input=xy, intern=TRUE)
+    w <- grep('warning', v, value=TRUE, ignore.case=TRUE)
+    if (length(w) > 0)
+      warning(sprintf('gdallocationinfo returned warning(s) for %s:\n', f),
+              paste(w, collapse='\n'), call.=FALSE)
+    e <- grep('error', v, value=TRUE, ignore.case=TRUE)
+    if (length(e) > 0)
+      stop(sprintf('gdallocationinfo returned error(s) for %s:\n', f),
+           paste(e, collapse='\n'), call.=FALSE)
+    v <- as.numeric(grep('warning|error', v, value=TRUE, invert=TRUE,
+                         ignore.case=TRUE))
+    v <- ifelse(!is.na(nodata) & v==nodata, NA, v)
+    v <- t(matrix(v, nrow=nbands))
+  }), inrasters)
+
+  if(isTRUE(simplify) && all(sapply(vals, ncol)==1)) {
+    vals <- do.call(cbind, vals)
+    colnames(vals) <- inrasters
+    vals
+  }
+  if(is.list(vals) && length(vals)==1) {
+    vals <- vals[[1]]
+  }
+  if(isTRUE(sp)) {
+    if(!is.list(vals)) vals <- list(vals)
+    spdf <- lapply(vals, function(x) {
+      SpatialPointsDataFrame(pts, as.data.frame(vals), proj4string=CRS(p4s))
+    })
+    if(length(spdf)==1) spdf[[1]] else spdf
+  } else {
+    vals
+  }
+}
+
 #' @title Mask function using gdal
 #' @rdname gdalMask
 #' @name gdalMask
@@ -289,34 +361,6 @@ gdalMask <- function(inpath, mask, outpath, quiet=TRUE, return.raster = FALSE) {
 
 }
 
-## Example
-# ff_in <- list.files('unmasked', patt='\\.tif$', full.names=TRUE)
-# ff_out <- sub('unmasked', 'masked', ff_in)
-# system.time(mapply(gdal_mask, ff_in, 'mask.tif', ff_out))
-#
-#
-#
-# gdalMask <- function(inpath, mask, outpath,return.raster = FALSE, ...) {
-#
-#   gdal_calc <- Sys.which('gdal_calc.py')
-#   if(gdal_calc=='') stop('gdal_calc.py not found on system.')
-#   if(!file.exists(outpath)) {
-#     feature_dir <- base::tempfile("");
-#     base::dir.create(feature_dir);
-#     rand_fname <- base::tempfile("tmp", feature_dir);
-#     tmp_rast <- base::paste0(rand_fname, ".tif");
-#     message('Masking ', basename(outpath))
-#     call1 <- sprintf('python %s -A %s --outpath=%s --calc="A*(A>-9999)" --NoDataValue=-9999',  gdal_calc, inpath, tmp_rast)
-#     call2 <- sprintf('python %s --co="compress=LZW" -A %s -B %s --outpath=%s --calc="(A*(A>0))*(B*(B>0))" --NoDataValue=0',  gdal_calc, tmp_rast, mask, outpath)
-#     system(call1)
-#     system(call2)
-#     unlink(tmp_rast)
-#   }
-#   if (isTRUE(return.raster)) {
-#     outraster <- raster::raster(outpath)
-#     return(outraster)
-#   }
-# }
 
 #' @title Split a multiband raster into multiple single files.
 #' @rdname gdalMultiband2Singles
