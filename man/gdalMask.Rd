@@ -4,12 +4,12 @@
 \alias{gdalMask}
 \title{Mask function using gdal}
 \usage{
-gdalMask(inpath, mask, outpath, quiet = TRUE, return.raster = FALSE)
+gdalMask(inpath, inmask, outpath, return.raster = FALSE)
 }
 \arguments{
 \item{inpath}{file path of the inpath raster}
 
-\item{mask}{path to a mask file which is NA for cells to mask and 1 for cells to keep.}
+\item{inmask}{file path which is NA for cells to mask and 1 for cells to keep.}
 
 \item{outpath}{file path of the output raster}
 

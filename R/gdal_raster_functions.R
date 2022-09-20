@@ -336,23 +336,21 @@ gdalExtract <- function(inrasters, pts, simplify=TRUE, sp=FALSE) {
 #' @rdname gdalMask
 #' @name gdalMask
 #' @param inpath file path of the inpath raster
-#' @param mask path to a mask file which is NA for cells to mask and 1 for cells to keep.
+#' @param inmask file path which is NA for cells to mask and 1 for cells to keep.
 #' @param outpath file path of the output raster
 #' @param return.raster if TRUE raster will be returned from function call.
 #' @export
 #'
 #' @importFrom raster raster
 
-gdalMask <- function(inpath, mask, outpath, quiet=TRUE, return.raster = FALSE) {
+gdalMask <- function(inpath, inmask, outpath, return.raster = FALSE) {
   gdal_calc <- Sys.which('gdal_calc.py')
   if(gdal_calc=='') stop('gdal_calc.py not found on system.')
   if(!file.exists(outpath)) {
     message('Masking ', basename(outpath))
     system(
       sprintf('%s --co="COMPRESS=LZW" -A %s -B %s --outpath=%s --calc="A"',
-              gdal_calc, inpath, mask, outpath),
-      show.output.on.console=!quiet
-    )
+              gdal_calc, inpath, inmask, outpath) )
   }
   if (isTRUE(return.raster)) {
     outraster <- raster::raster(outpath)
