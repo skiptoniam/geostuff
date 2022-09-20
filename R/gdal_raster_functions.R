@@ -349,7 +349,7 @@ gdalMask <- function(inpath, inmask, outpath, return.raster = FALSE) {
   if(!file.exists(outpath)) {
     message('Masking ', basename(outpath))
     system(
-      sprintf('%s --co="COMPRESS=LZW" -A %s -B %s --outpath=%s --calc="A"',
+      sprintf('%s --co="COMPRESS=LZW" -A %s -B %s --outfile=%s --calc="A"',
               gdal_calc, inpath, inmask, outpath) )
   }
   if (isTRUE(return.raster)) {
