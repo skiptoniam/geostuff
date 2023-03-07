@@ -4,7 +4,7 @@
 \alias{gdalTiles}
 \title{Calculate distance raster using gdal}
 \usage{
-gdalTiles(inpath, outdir, nx = 256, ny = nx)
+gdalTiles(inpath, outdir, nx = 256, ny = nx, multiInput = FALSE)
 }
 \arguments{
 \item{inpath}{file path of inpath file to change.}

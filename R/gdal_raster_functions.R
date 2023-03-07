@@ -754,12 +754,16 @@ gdalStitchTitles <- function(tilespath, outpath, bigtif = TRUE, return.raster = 
 #' @param ny The number of x direction pixels per tile
 #' @export
 
-gdalTiles <- function(inpath, outdir, nx=256, ny=nx){
+gdalTiles <- function(inpath, outdir, nx=256, ny=nx, multiInput=FALSE){
 
   gdal_retile <- Sys.which('gdal_retile.py')
   if(gdal_retile=='') stop('gdal_retile.py not found on system.')
 
+  if(multiInput){
+    call1 <- sprintf("%s -ps %d %d -targetDir '%s' %s -co compress=LZW", gdal_retile, nx, ny, outdir, inpath)
+  } else {
   call1 <- sprintf("%s -ps %d %d -targetDir '%s' '%s' -co compress=LZW", gdal_retile, nx, ny, outdir, inpath)
+  }
   system(call1)
 
 }
