@@ -16,8 +16,8 @@ gdal180to360 <- function(inpath,outpath,return.raster = FALSE){
   if(gdal_merge=='') stop('gdal_merge.py not found on system.')
 
   if(!file.exists(outpath)){
-    r <- raster::raster(inpath)
-    ext <- raster::extent(r)
+    r <- terra::rast(inpath)
+    ext <- terra::ext(r)
     if (!all(c(ext[1],ext[2],ext[3],ext[4])%in%c(-180,180,-90,90)))stop('check the extent of the original rasters, should be xmin = -180, xmax = 180, ymin = -90, max = 90')
     feature_dir <- base::tempfile("");
     base::dir.create(feature_dir);
@@ -34,7 +34,7 @@ gdal180to360 <- function(inpath,outpath,return.raster = FALSE){
     system(call4)
   }
   if (isTRUE(return.raster)) {
-    outraster <- raster::raster(outpath)
+    outraster <- terra::rast(outpath)
     return(outraster)
   }
 }
@@ -144,7 +144,7 @@ gdalClipWithShape <- function(inrast, inshp, outrast=NULL, field=NULL,
 
   system(x)
   retrast <- NULL
-  if(return.raster) retrast <- raster::raster(tmpRastOut)
+  if(return.raster) retrast <- terra::rast(tmpRastOut)
 
   # free up the data
   if(!is.character(inrast)) unlink(tmpRastIn)
@@ -181,7 +181,7 @@ gdalCrop <- function(inpath, outpath, extent=NULL, resolution=NULL, return.raste
   # }
 
   if (isTRUE(return.raster)) {
-    outraster <- raster::raster(outpath)
+    outraster <- terra::rast(outpath)
     return(outraster)
   }
 }
@@ -234,7 +234,7 @@ gdalDistance <- function(inpath, outpath, target=0, maxdist=NULL, bigtif=FALSE, 
   }
 
   if (isTRUE(return.raster)) {
-    outraster <- raster::raster(outpath)
+    outraster <- terra::rast(outpath)
     return(outraster)
   }
 }
@@ -255,7 +255,7 @@ gdalEdit <- function(inpath,scale,offset,return.raster=TRUE){
   call1 <- sprintf('gdal_edit.py -scale %s -offset %s "%s"', scale, offset, inpath)
   system(call1)
   if (isTRUE(return.raster)) {
-    outraster <- raster::raster(inpath)
+    outraster <- terra::rast(inpath)
     return(outraster)
   }
 }
@@ -353,7 +353,7 @@ gdalMask <- function(inpath, inmask, outpath, return.raster = FALSE) {
               gdal_calc, inpath, inmask, outpath) )
   }
   if (isTRUE(return.raster)) {
-    outraster <- raster::raster(outpath)
+    outraster <- terra::rast(outpath)
     return(outraster)
   }
 
@@ -375,7 +375,7 @@ gdalMultiband2Singles <- function(inpath, outdir=NULL, bands=NULL, return_list =
   if(gdal_trans=='') stop('gdal_translate not found on system.')
   if(is.null(outdir)) outdir <- tempdir()
 
-  tmpBrick <- raster::brick(inpath)
+  tmpBrick <- terra::rast(inpath)
   nbands <- raster::nlayers(tmpBrick)
 
   if(!is.null(bands)) {
@@ -479,7 +479,7 @@ gdalReproject <- function(inpath, outpath, xres, yres=xres, s_srs, t_srs, resamp
                  ot, s_srs, t_srs, resampling, extent[1],extent[3],extent[2],extent[4], paste(xres, yres), of, inpath, outpath))
 
   if (isTRUE(return.raster)) {
-    outraster <- raster::raster(outpath)
+    outraster <- terra::rast(outpath)
     return(outraster)
   }
 
@@ -700,10 +700,49 @@ gdalResample <- function(inpath, outpath = NULL,
     system(resample_command)
   }
   if (isTRUE(return.raster)) {
-    outraster <- raster::raster(tmpTifOut)
+    outraster <- terra::rast(tmpTifOut)
     return(outraster)
   }
 }
+
+gdalScale <- function(inpath,
+                      outpath,
+                      mn = NULL,
+                      std = NULL,
+                      na.value=NULL,
+                      overwrite=TRUE,
+                      return.raster=TRUE,
+                      quiet=FALSE){
+
+  gdal_calc <- Sys.which('gdal_calc.py')
+  if(gdal_calc=='') stop('gdal_calc.py not found on system. Make sure gdal and python installed and visiable to path.')
+  if(overwrite)overwrite <- "--overwrite"
+  else overwrite <- ""
+
+  if(quiet)quiet.call <- "--quiet"
+  else quiet.call <- ""
+
+  nbands <- suppressWarnings(sapply(inpath, function(x) nrow(attr(rgdal::GDALinfo(x), 'df'))))
+  if(length(nbands) > 1 & any(nbands > 1))
+    stop('One or more rasters have multiple bands. Stopping.')
+
+  if(length(inpath)==1) {
+    inputs <- paste0('-', LETTERS[seq_len(nbands)], ' ', shQuote(inpath), collapse=' ')
+    n <- nbands
+  }
+
+  message('Scaling raster and writing to ', basename(outpath))
+  call1 <- sprintf("%s %s --outfile='%s' --calc='(%s - %s)/%s' --co=compress=LZW '%s' %s --NoDataValue=-9999", gdal_calc, inputs, outpath,  paste0(LETTERS[seq_len(n)]), as.numeric(mn), as.numeric(std), overwrite,quiet.call)#  $FILE3 $FILE2 $FILE1
+  system(call1)
+
+  if(return.raster){
+    r <- terra::rast(outpath)
+    return(r)
+  }
+
+}
+
+
 
 #' @title Stitch together tiles.
 #' @rdname gdalStitchTitles
@@ -739,7 +778,7 @@ gdalStitchTitles <- function(tilespath, outpath, bigtif = TRUE, return.raster = 
   unlink(gsub(pkgmaker::file_extension(outpath), "vrt",
               outpath))
   if (return.raster) {
-    out <- raster::raster(outpath)
+    out <- terra::rast(outpath)
     return(out)
   }
 }
