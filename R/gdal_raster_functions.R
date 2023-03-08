@@ -359,7 +359,6 @@ gdalMask <- function(inpath, inmask, outpath, return.raster = FALSE) {
 
 }
 
-
 #' @title Split a multiband raster into multiple single files.
 #' @rdname gdalMultiband2Singles
 #' @name gdalMultiband2Singles
